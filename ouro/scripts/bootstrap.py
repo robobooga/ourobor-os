@@ -28,7 +28,7 @@ def detect_llm_environment():
 
     return detected, primary_instruction_file
 
-def bootstrap():
+def bootstrap(hook_options=None):
     # Source template directory is the skill's wiki directory
     script_dir = Path(__file__).resolve().parent
     template_src = script_dir.parent / 'wiki'
@@ -80,7 +80,11 @@ Before doing any work, check whether the wiki has already been populated:
   ```bash
   python <path-to-skill>/scripts/capture.py --crawl
   ```
-- **Ongoing sessions** (wiki already exists): run a git-aware crawl to stage only recently changed files.
+- **Ongoing sessions, hooks installed** (`bootstrap.py --install-hooks`): every commit already stages captures automatically. Check for pending work (Claude Code shows this notice at session start):
+  ```bash
+  python <path-to-skill>/scripts/capture.py --status
+  ```
+- **Ongoing sessions, no hooks**: run a git-aware crawl to stage only recently changed files.
   ```bash
   python <path-to-skill>/scripts/capture.py --crawl --git
   ```
@@ -89,6 +93,8 @@ Before doing any work, check whether the wiki has already been populated:
 ### 1. Monitor the Capture Queue
 - Regularly read `ouro/wiki/capture-queue.md` using your file reading tool.
 - When new snippets are found, "Synthesize" them into the appropriate `ouro/wiki/entities/`, `ouro/wiki/patterns/`, or `ouro/wiki/maps/` files.
+- **Pointer captures** (entries with `Commit` and `Change` fields instead of content) come from the git hooks (`Commit: staged` when captured at pre-commit): read the current file at `Source` before synthesizing. `Change: deleted` means the file is gone — update or remove its entity.
+- **Ship docs with the change**: when you commit code, update and `git add` the relevant wiki pages in the same commit. If the Ourobor OS docs check or commit gate blocks a commit, document the listed files, stage the wiki pages, and retry. Prefix the commit with `OURO_SKIP_DOCS_CHECK=1` only when the change needs no documentation. If an Ourobor OS Stop hook reports undocumented changes when you finish a task, document them before stopping, or reply briefly why they need no documentation yet.
 - Use **Doxygen** tags (`@entity`, `@brief`, `@snippet`, etc.) to structure the documentation.
 - Once synthesized, finalize the capture by popping it from the queue:
   ```bash
@@ -151,6 +157,11 @@ Before doing any work, check whether the wiki has already been populated:
         with open(Path.cwd() / target_file, 'w', encoding='utf-8') as f:
             f.write("# Project Instructions for LLM Agents\n" + protocol)
 
+    if hook_options is not None:
+        import hooks  # sibling module; the script's directory is on sys.path
+        print("[*] Installing automation hooks...")
+        hooks.install(hook_options)
+
     print("\n" + "="*60)
     print("[OK] Bootstrap complete. Ourobor OS is ready!")
     print("="*60)
@@ -163,6 +174,9 @@ Before doing any work, check whether the wiki has already been populated:
     print("3. Monitor the capture queue:")
     print("   Ask your LLM to read ouro/wiki/capture-queue.md")
     print("4. Synthesize captures into structured documentation")
+    if hook_options is None:
+        print("5. (Optional) Capture on every commit and keep docs in the same commit:")
+        print(f"   python {script_dir}/hooks.py install [--capture-on pre-commit] [--docs-check warn|strict] [--commit-gate] [--stop-hook]")
 
     if 'Claude Code' in detected_llms:
         print("\n[TIP] Claude Code tips:")
@@ -176,4 +190,10 @@ Before doing any work, check whether the wiki has already been populated:
     print("="*60 + "\n")
 
 if __name__ == "__main__":
-    bootstrap()
+    args = sys.argv[1:]
+    hook_options = None
+    if '--install-hooks' in args:
+        import hooks
+        # Parse hook flags before touching the project so a typo fails fast
+        hook_options = hooks.install_parser().parse_args([a for a in args if a != '--install-hooks'])
+    bootstrap(hook_options)

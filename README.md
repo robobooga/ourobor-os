@@ -92,6 +92,21 @@ Or, initialize the system in a new project:
 python ./ouro/scripts/bootstrap.py
 ```
 
+To stop running capture by hand, opt in to hooks. A git post-commit hook stages every committed file, and a Claude Code SessionStart hook tells your agent what's pending:
+```
+python ./ouro/scripts/bootstrap.py --install-hooks
+```
+
+To make docs ship in the same commit as the feature, add a pre-commit docs check and, for Claude Code, a commit gate that makes the agent document before it commits:
+```
+python ./ouro/scripts/hooks.py install --docs-check strict --commit-gate
+```
+
+With Claude Code, the agent can also write the docs for you: `--stop-hook` asks the running agent to document its code changes before it finishes a turn, with no extra LLM call:
+```
+python ./ouro/scripts/hooks.py install --docs-check strict --commit-gate --stop-hook
+```
+
 ## 🌟 Roadmap
 
 Ourobor OS currently ships as an **Agent Skill** for seamless IDE integration, with a **Web UI** for publishing your wiki as a static site. Planned extensions include:

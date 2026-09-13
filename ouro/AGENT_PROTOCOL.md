@@ -10,7 +10,11 @@ Before doing any work, check whether the wiki has already been populated:
   ```bash
   python <path-to-skill>/scripts/capture.py --crawl
   ```
-- **Ongoing sessions** (wiki already exists — drift correction): run a git-aware crawl to stage only recently changed files. This is cheaper and avoids bloating the queue with unchanged code.
+- **Ongoing sessions, hooks installed** (`bootstrap.py --install-hooks`): every commit already stages pointer captures automatically. Check for pending work (Claude Code shows this notice at session start):
+  ```bash
+  python <path-to-skill>/scripts/capture.py --status
+  ```
+- **Ongoing sessions, no hooks** (drift correction): run a git-aware crawl to stage only recently changed files. This is cheaper and avoids bloating the queue with unchanged code.
   ```bash
   python <path-to-skill>/scripts/capture.py --crawl --git
   ```
@@ -22,6 +26,8 @@ Before doing any work, check whether the wiki has already been populated:
 ### 1. Monitor & Synthesize
 - **Monitor**: Regularly check `ouro/wiki/capture-queue.md` for new snippets.
 - **Synthesize**: Move snippets into appropriate `ouro/wiki/entities/`, `ouro/wiki/patterns/`, or `ouro/wiki/maps/` files using **Doxygen** tags (`@entity`, `@brief`, `@snippet`).
+- **Pointer captures**: Entries with `Commit` and `Change` fields instead of content come from the git hooks (`Commit: staged` when captured at pre-commit). Read the current file at `Source` before synthesizing; `Change: deleted` means the file is gone — update or remove its entity.
+- **Ship docs with the change**: When you commit code, update and `git add` the relevant wiki pages in the same commit. If the Ourobor OS docs check or commit gate blocks a commit, document the listed files, stage the wiki pages, and retry. Prefix the commit with `OURO_SKIP_DOCS_CHECK=1` only when the change needs no documentation. If an Ourobor OS Stop hook reports undocumented changes when you finish a task, document them before stopping, or reply briefly why they need no documentation yet.
 - **Finalize**: After synthesis, remove processed entries from the queue:
   ```bash
   python <path-to-skill>/scripts/capture.py --pop

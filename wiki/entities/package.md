@@ -13,7 +13,7 @@
 
 Checks for required files and directories. Returns a list of missing items as strings. If the list is non-empty, `package()` aborts before creating the archive.
 
-**Required files**: `README.md`, `AGENT_PROTOCOL.md`, `SKILL.md`, `scripts/bootstrap.py`, `scripts/capture.py`, `wiki/index.md`, `wiki/schema.md`, `wiki/capture-queue.md`
+**Required files**: `README.md`, `AGENT_PROTOCOL.md`, `SKILL.md`, `scripts/bootstrap.py`, `scripts/capture.py`, `scripts/hooks.py`, `wiki/index.md`, `wiki/schema.md`, `wiki/capture-queue.md`
 
 **Required directories**: `scripts/`, `wiki/`, `wiki/entities/`, `wiki/decisions/`, `wiki/patterns/`, `wiki/maps/`
 

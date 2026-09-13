@@ -30,6 +30,30 @@ The bootstrap script will:
 - Append maintenance protocols to your instruction file (CLAUDE.md, GEMINI.md, etc.)
 - Detect your LLM environment and provide relevant tips
 
+### Automatic Capture (optional)
+Skip running capture by hand after every change by installing hooks:
+```bash
+python <path-to-skill>/scripts/bootstrap.py --install-hooks
+# or, on an already-bootstrapped project:
+python <path-to-skill>/scripts/hooks.py install
+```
+- **git post-commit** (default): after each commit, stages a lightweight *pointer* entry (path, commit, change type) for every committed file, replacing older entries for the same file. It never blocks a commit.
+- **Claude Code SessionStart** (when `.claude/` exists): tells the agent how many captures are pending so it synthesizes them without being asked.
+
+To keep documentation in the **same commit** as the code it describes, add any of:
+```bash
+python <path-to-skill>/scripts/hooks.py install --docs-check strict --commit-gate --stop-hook
+python <path-to-skill>/scripts/hooks.py install --capture-on pre-commit
+```
+- `--docs-check warn|strict` (git pre-commit): warns about, or blocks, commits that change code but no `ouro/wiki/` page. Bypass once with `OURO_SKIP_DOCS_CHECK=1 git commit ...`.
+- `--commit-gate` (Claude Code PreToolUse): stops the agent's `git commit` under the same rule and tells it which files to document first.
+- `--stop-hook` (Claude Code Stop): when the agent finishes a turn with code changes but no wiki updates, it is asked — once per set of changes — to write the docs right then, in the same session. No extra LLM call; the agent that made the change documents it.
+- `--capture-on pre-commit`: captures staged files at pre-commit and adds the queue to that commit, instead of post-commit.
+
+`install` is declarative — re-running it applies exactly the flags given.
+
+Synthesis itself stays with your LLM agent — hooks never call an LLM. Remove with `python <path-to-skill>/scripts/hooks.py uninstall`.
+
 ## 🧠 Maintenance Workflow
 
 Once initialized, your LLM agent is responsible for maintaining the wiki.
@@ -56,7 +80,21 @@ python <path-to-skill>/scripts/capture.py src/main.py
 
 # Capture raw text or architectural notes
 python <path-to-skill>/scripts/capture.py "Architectural Note: Use composition over inheritance here."
+
+# Show how many captures are pending (prints nothing when empty)
+python <path-to-skill>/scripts/capture.py --status
+
+# Stage pointer captures for a commit (what the post-commit hook runs)
+python <path-to-skill>/scripts/capture.py --from-commit HEAD
+
+# Stage pointer captures for staged files and add the queue to the commit (pre-commit capture)
+python <path-to-skill>/scripts/capture.py --from-index
+
+# Check staged changes include wiki updates (pre-commit docs check; --strict exits 1)
+python <path-to-skill>/scripts/capture.py --check-docs --strict
 ```
+
+Staging a file that is already in the queue replaces its older entry. Pointer entries carry no content — read the current file at `Source` when synthesizing (`Change: deleted` means retire or update its entity).
 
 ### 2. Monitor & Synthesize
 

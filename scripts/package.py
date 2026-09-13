@@ -11,6 +11,7 @@ def validate_ouro_structure(ouro_dir):
         'SKILL.md',
         'scripts/bootstrap.py',
         'scripts/capture.py',
+        'scripts/hooks.py',
         'wiki/index.md',
         'wiki/schema.md',
         'wiki/capture-queue.md',

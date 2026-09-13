@@ -12,7 +12,8 @@ ourobor-os/
 │   ├── README.md                  Skill-level quick start
 │   ├── scripts/
 │   │   ├── capture.py             Knowledge ingestion tooling
-│   │   └── bootstrap.py           One-time project initialization
+│   │   ├── bootstrap.py           One-time project initialization
+│   │   └── hooks.py               Opt-in git pre/post-commit + Claude Code hooks
 │   └── wiki/                      Clean skeleton — empty subdirs only
 │       ├── index.md               Template hub
 │       ├── schema.md              Template schema
