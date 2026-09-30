@@ -32,8 +32,9 @@ An observability, interpretability and documentation app for vibecoders and prof
    - `bootstrap.py` fills in the real skill path.
    - Code Comments & TODOs rule in the protocol and in AGENT.md.
    - Local run log (`runlog.py`, [ADR-012](../decisions/ADR-012-local-run-log.md)) so external test runs can be reviewed.
-0. ⬜ **Exit check**: onboard agent-heavy external repos, review them with `runlog.py show`, and record their baselines.
-1. ⬜ **Claim ledger** (no LLM): `ouro claims`, static HTML in plain-English and technical modes, agent feed through the hooks, `--vault` / `OURO_VAULT`.
+0. ✅ **Exit check (first run, dabao-dasher)**: comment debt was negligible, while docs drift was real (2/2). Nine onboarding defects were found and fixed in `feat/onboarding-fixes`.
+0. ⬜ More field tests, including a non-TypeScript repo and a vibecoder-owned repo.
+1. ⬜ **Docs-vs-code drift**: `doc_scan.py` shortlists outdated doc statements (broken references, docs older than the code they reference); the agent confirms them into `maps/doc-drift.md`; comment claims feed the same page; agent feed through the hooks; `--vault` / `OURO_VAULT`.
 2. ⬜ **Ask & Verify**: explanations, suggested tests, value probes, and one-click local verify with the project's own runner in a throwaway worktree (*inferred* → *verified*).
 3. ⬜ **Trace view and vibecoder flows**: `sys.settrace` trace view from real runs, guided "what happens if…?" flows, vault mode as the default.
 - Deferred: isolated sandbox (for untrusted repos), LSP/SCIP, local UI app, LLM "contradicted" judge, advisory Pass Gate, vault sync.

@@ -1,5 +1,5 @@
 @entity ADR-011
-@brief Ourobor OS is an observability, interpretability and documentation app for vibecoders and professionals alike, heading toward a sidecar vault outside the target repo. Work is ordered measure and onboard → deterministic claim ledger → Ask & Verify (explanations, suggested tests, value probes, one-click local runs) → trace view. Comments are treated as scoped, time-stamped claims. The skill already ships the scan, agent onboarding, and the comment/TODO rule, and this repo follows the rule itself. Full spec: [docs/spec-v0.3-sidecar.md](../../docs/spec-v0.3-sidecar.md).
+@brief Ourobor OS is an observability, interpretability and documentation app for vibecoders and professionals alike, heading toward a sidecar vault outside the target repo. Work is ordered measure and onboard → docs-vs-code drift (a deterministic shortlist that the agent confirms) → Ask & Verify (explanations, suggested tests, value probes, one-click local runs) → trace view. Docs and comments are treated as claims, not truth. The skill already ships the scan, agent onboarding, and the comment/TODO rule, and this repo follows the rule itself. Full spec: [docs/spec-v0.3-sidecar.md](../../docs/spec-v0.3-sidecar.md).
 
 ## Context
 
@@ -27,9 +27,12 @@ The decision went through several rounds on 2026-09-30:
    - `SKILL.md` gains an **Agent Onboarding** checklist that an agent runs on the user's behalf: bootstrap, measure, document key modules, offer hooks, report.
    - `bootstrap.py` fills in the real skill path in the protocol it appends.
    - The protocol gains the **Code Comments & TODOs** rule: comments apply only to their own scope, code wins over a stale comment, and a `TODO` is not permission to defer requested work.
-4. **Phase 1: deterministic claim ledger.**
-   - It uses `ast`/`tokenize`, git blame and span hashes, with no LLM. Status is only *stale* or *current*.
-   - Outputs are a CLI report, static HTML in plain-English and technical modes, and a read-only agent feed through the existing hooks.
+4. **Phase 1: docs-vs-code drift** (amended after the field test below).
+   - `doc_scan.py` shortlists Markdown statements whose referenced paths or symbols are missing, or whose referenced code changed after the section was last edited.
+   - The agent confirms or dismisses each candidate with `file:line` evidence, and the results go in `ouro/wiki/maps/doc-drift.md`.
+   - Comment claims from `claim_scan.py` feed the same page as a secondary source.
+   - Outputs are a CLI report, the wiki page, static HTML in plain-English and technical modes, and an agent feed through the existing hooks.
+   - The full comment ledger (scope, kind, span hashes, TODO owners) is deferred.
 5. **Phase 2: Ask & Verify, the core experience.**
    - **Ask** returns one of three kinds of response: an explanation, suggested tests, or extension points.
    - **Value probes** call a function with given values and tabulate the results.
@@ -49,12 +52,36 @@ The decision went through several rounds on 2026-09-30:
    - `claim_scan.py --include-skill` measures our own code, and the baseline is kept in the claim_scan entity.
    - The stale comments the scan found were fixed.
 
+## Field Test Amendment (2026-09-30)
+
+The first external onboarding ran on `dabao-dasher`, a 4-day-old, agent-written TypeScript repo with 251 files and 123 commits. It was reviewed through the local run log ([ADR-012](ADR-012-local-run-log.md)).
+
+**The premise shifted.**
+- Code comments were clean: 0 `TODO`s. All 3 comments flagged stale were accurate on review.
+- The real drift was in `docs/`, and the agent found both cases unaided:
+  - `docs/AUDIO.md` claimed nothing imports `src/audio`.
+  - `docs/ENGINE.md` described a workaround whose proper fix now exists.
+- Agents update code and nearby comments together, but seldom revisit design docs.
+- So Phase 1 moves from the comment ledger to docs-vs-code drift, and the confirm/dismiss loop the agent improvised becomes the protocol.
+
+**Nine onboarding defects** were found from the agent's reported deviations and fixed in `feat/onboarding-fixes`:
+1. `--crawl` ignored `.gitignore`.
+2. Full-content queue entries were too large.
+3. There was no batch completion of captures (the agent edited the queue by hand).
+4. Commands used `python`, which wasn't on the PATH, instead of `python3`.
+5. `AGENTS.md` wasn't recognised, and symlinks weren't deduplicated.
+6. The protocol conflicted with an existing `docs/adr/` convention.
+7. The schema forbade a `#` heading before `@entity`.
+8. "1:1 parity" contradicted the "document the top modules" step.
+9. The stale-comment span was too wide, and the time-based grace period was meaningless in fast repos. The global-wording heuristic was also too noisy (35/347).
+
 ## Alternatives Considered
 
 - **v0.3.0 (Ask-first Phase 1 with sandbox, LSP/SCIP and a local app):** Too large for one developer, and nothing it produced would have been verified.
 - **v0.3.1 (ledger and agent feed first; vibecoders and real runs "later"/deferred):** It underweighted the product's core promise, which is explaining code and testing values for both audiences.
 - **Isolated sandbox as the only way to run code:** Cross-platform containers or microVMs are an infrastructure project. Running the project's own runner in a throwaway worktree covers users' own repos now. The sandbox stays deferred for untrusted code.
 - **LLM-simulated dry-run traces:** A trace an LLM imagines is the hallucination the tool is meant to counter. Traces come only from real runs.
+- **Keep the comment ledger as Phase 1 after the field test:** The measurement didn't support it. On an agent-written repo, comment and TODO debt was negligible and the heuristic scored 0/3, while docs drift was real. The comment scan stays as a cheap secondary source.
 - **Protocol rule plus TODO lint only (no ledger):** Adopted as Phase 0. A lint can't tell a comment's scope or whether it is stale, and the explanations need trustworthy claims.
 - **Hard-ban comments and TODOs:** This throws away real rationale and pushes agents to hide deferrals.
 - **LLM "contradicted" judge in Phase 1:** An unmeasured false-positive rate would make the ledger untrustworthy.
