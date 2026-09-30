@@ -208,7 +208,7 @@ Before doing any work, check whether the wiki has already been populated:
 
     print("="*60 + "\n")
 
-if __name__ == "__main__":
+def main():
     args = sys.argv[1:]
     hook_options = None
     if '--install-hooks' in args:
@@ -216,3 +216,8 @@ if __name__ == "__main__":
         # Parse hook flags before touching the project so a typo fails fast
         hook_options = hooks.install_parser().parse_args([a for a in args if a != '--install-hooks'])
     bootstrap(hook_options)
+
+
+if __name__ == "__main__":
+    import runlog  # sibling module; the script's directory is on sys.path
+    runlog.run('bootstrap', main)

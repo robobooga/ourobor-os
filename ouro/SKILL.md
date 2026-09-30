@@ -34,12 +34,19 @@ When a user asks you to set up or onboard Ourobor OS, run these steps from the *
    python <path-to-skill>/scripts/hooks.py install --docs-check warn --stop-hook
    ```
    This captures on every commit, warns when code ships without docs, and (in Claude Code) has the agent write docs before it finishes a turn. Install only if the user agrees.
-6. **Report back** in a few lines:
+6. **Report back** to the user in a few lines:
    - what was created
    - the baseline numbers: TODO count and oldest age, stale comments, global-wording comments
    - the 3 most notable stale comments or TODOs, as `file:line`
    - which modules are documented so far and how many captures are pending
    - whether hooks were installed
+
+   **Log the same report** so the onboarding can be reviewed later. Also include anything that was confusing or that you skipped, and why:
+   ```bash
+   python <path-to-skill>/scripts/runlog.py report --step onboarding --message "<your report>"
+   ```
+
+**Run log (local only).** Every skill script appends its arguments, exit code and output to `~/.ouro/runs/<project>-<hash>/events.jsonl`, and `runlog.py report` adds your summary plus a snapshot of the wiki. Nothing is sent anywhere. The log lets the user (or a maintainer reviewing with them) compare what happened with what they expected. Use `runlog.py show` to read it, `OURO_RUNLOG=off` to disable it, and `OURO_HOME=<dir>` to relocate it.
 
 After onboarding, follow the protocol appended to the instruction file. In particular, **comments apply only to their own scope; code wins over a stale comment; a `TODO` is not permission to defer requested work.**
 
@@ -165,6 +172,8 @@ ouro/
     ├── patterns/             # Reusable architectural patterns
     └── maps/                 # High-level mental models and data flows
         └── comment-baseline.md  # claim_scan.py --wiki output (regenerate, do not hand-edit)
+
+~/.ouro/runs/<project>-<hash>/events.jsonl   # local run log (runlog.py), outside the repo
 ```
 
 ## 💡 Best Practices

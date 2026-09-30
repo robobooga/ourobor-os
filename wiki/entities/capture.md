@@ -170,3 +170,5 @@ python ouro/scripts/capture.py --pop
 - `undocumented_changes()` accepts *any* staged wiki page as documentation; it cannot tell whether the right entity was updated.
 - Git paths are relative to the repository root while `QUEUE_PATH` is relative to the cwd, so projects whose `ouro/` sits in a subdirectory of the repo (monorepos) are not supported by the git-based commands.
 - `--git` depth uses `HEAD~{depth}` which fails gracefully (silent skip) when the repo has fewer commits than `depth`; the working-tree commands still run.
+
+@note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.

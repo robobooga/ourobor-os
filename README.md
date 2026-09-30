@@ -94,6 +94,8 @@ python ./ouro/scripts/capture.py --crawl            # stage code for your agent 
 ```
 Replace `./ouro` with wherever the skill was installed (for example `.claude/skills/ouro` or `.agents/skills/ouro`).
 
+**See what happened.** Every script run and the agent's onboarding report are logged **locally** to `~/.ouro/runs/`. Nothing is uploaded. Use `python ./ouro/scripts/runlog.py show` to review, and set `OURO_RUNLOG=off` to disable it.
+
 To stop running capture by hand, opt in to hooks. A git post-commit hook stages every committed file, and a Claude Code SessionStart hook tells your agent what's pending:
 ```
 python ./ouro/scripts/bootstrap.py --install-hooks

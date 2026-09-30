@@ -113,3 +113,5 @@ python <path-to-skill>/scripts/hooks.py uninstall
 - With post-commit capture, commits that already include docs still enqueue pointer entries, so the agent must pop them after confirming the docs are current.
 - With post-commit capture, `capture-queue.md` shows as modified after each commit until the next commit or synthesis.
 - With pre-commit capture, `git commit <paths>` leaves `capture-queue.md` shown as `MM` (the working tree matches `HEAD`, but the real index is stale) until the next commit re-stages it.
+
+@note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.

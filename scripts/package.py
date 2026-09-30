@@ -13,6 +13,7 @@ def validate_ouro_structure(ouro_dir):
         'scripts/capture.py',
         'scripts/hooks.py',
         'scripts/claim_scan.py',
+        'scripts/runlog.py',
         'wiki/index.md',
         'wiki/schema.md',
         'wiki/capture-queue.md',

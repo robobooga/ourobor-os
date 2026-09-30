@@ -62,3 +62,5 @@ python <path-to-skill>/scripts/bootstrap.py --install-hooks --docs-check strict 
 1. Read `ouro/wiki/index.md` to verify initialization.
 2. Run `python ouro/scripts/capture.py --crawl` to stage the existing codebase.
 3. Ask the LLM to synthesize the capture queue into structured wiki entries.
+
+@note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.

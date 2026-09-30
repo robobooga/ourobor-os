@@ -499,4 +499,5 @@ def main():
         stage(arg1)
 
 if __name__ == '__main__':
-    main()
+    import runlog  # sibling module; the script's directory is on sys.path
+    runlog.run('capture', main)

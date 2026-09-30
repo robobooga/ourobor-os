@@ -35,6 +35,14 @@ Our own code follows the rule the skill ships (see [ADR-011](wiki/decisions/ADR-
 - **Deferral**: A `TODO`/`FIXME` is not permission to defer work you were asked to do. Finish the task, or record the deferral and its reason in the wiki (capture queue or an ADR) instead of adding a new `TODO` to the code.
 - **Measure**: Run `python ouro/scripts/claim_scan.py --include-skill` before and after larger changes; don't let the stale or `TODO` counts grow. Record the baseline in [claim_scan](wiki/entities/claim_scan.md). Never pass `--wiki` in this repo: it writes into `ouro/wiki/`, which must stay an empty skeleton ([ADR-001](wiki/decisions/ADR-001-ouro-as-distributable-skeleton.md)).
 
+### Reviewing Real-World Runs
+When the user tries the skill in another project, review what actually happened before changing onboarding or scripts:
+```bash
+python ouro/scripts/runlog.py list                        # projects with logs in ~/.ouro/runs/
+python ouro/scripts/runlog.py show <project_path> --last 100
+```
+Compare the agent's `REPORT` (and the wiki snapshot) with what you would have done, then read the generated pages in that project if needed. Record concrete findings in the capture queue or an ADR, not in memory alone. See [ADR-012](wiki/decisions/ADR-012-local-run-log.md).
+
 ### Doxygen Standards
 - `@entity <name>`: Module/entity defined.
 - `@brief <text>`: One-sentence summary.

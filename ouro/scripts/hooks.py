@@ -371,4 +371,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import runlog  # sibling module; the script's directory is on sys.path
+    runlog.run('hooks', main)

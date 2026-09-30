@@ -14,6 +14,7 @@ ourobor-os/
 │   │   ├── capture.py             Knowledge ingestion tooling
 │   │   ├── bootstrap.py           One-time project initialization
 │   │   ├── claim_scan.py          Comment/TODO debt scan (stale comments, TODO age)
+│   │   ├── runlog.py              Local run log (~/.ouro/runs/), wraps every script's main()
 │   │   └── hooks.py               Opt-in git pre/post-commit + Claude Code hooks
 │   └── wiki/                      Clean skeleton — empty subdirs only
 │       ├── index.md               Template hub
@@ -28,7 +29,7 @@ ourobor-os/
 │   ├── index.md                   Project wiki hub
 │   ├── schema.md                  Doxygen protocol reference
 │   ├── capture-queue.md           Active staging area
-│   ├── entities/                  Module docs (capture, bootstrap, claim_scan, hooks, builder, package)
+│   ├── entities/                  Module docs (capture, bootstrap, claim_scan, runlog, hooks, builder, package)
 │   ├── decisions/                 ADRs (001–004)
 │   ├── patterns/                  Capture-synthesize loop
 │   └── maps/                      This file

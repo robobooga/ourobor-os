@@ -110,6 +110,18 @@ python <path-to-skill>/scripts/claim_scan.py ../other-repo --limit 30
 
 The skill's own files are skipped unless `--include-skill` is passed.
 
+### Review What Happened (Local Run Log)
+
+**What to expect:**
+Each script run appends one JSON line (arguments, exit code, duration, capped stdout/stderr) to `~/.ouro/runs/<project>-<hash>/events.jsonl`. Agents add their onboarding summary with `report`, which also snapshots the wiki (pages, sizes, pending captures). The log stays on your machine and is never uploaded. It exists so you can check what the agent actually did.
+
+```bash
+python <path-to-skill>/scripts/runlog.py report --step onboarding --message "summary..."   # agent summary + wiki snapshot
+python <path-to-skill>/scripts/runlog.py show [project_path] [--last N]                   # read a project's log
+python <path-to-skill>/scripts/runlog.py list                                             # all logged projects
+OURO_RUNLOG=off python <path-to-skill>/scripts/capture.py --crawl                          # run without logging
+```
+
 ### Capture Code & Documentation
 
 **What to expect:**
@@ -222,6 +234,7 @@ ouro/
 │   ├── bootstrap.py                 # Smart initialization with environment detection
 │   ├── capture.py                   # Portable capture script
 │   ├── claim_scan.py                # Comment/TODO debt scan (stale comments, TODO age)
+│   ├── runlog.py                    # Local run log (~/.ouro/runs/), agent reports
 │   └── hooks.py                     # Optional git pre/post-commit and Claude Code hooks
 └── wiki/                            # Template wiki structure
     ├── index.md                     # Wiki hub template
@@ -294,6 +307,12 @@ Read-only comment and TODO debt scan that:
 - Uses `tokenize`/`ast` for Python (scope names such as `Class.method`) and a line-comment regex for other languages
 - Dates each comment and the code it annotates with `git blame`
 - Reports TODO age, stale comments and global-sounding wording; `--wiki` saves `ouro/wiki/maps/comment-baseline.md`
+
+### scripts/runlog.py
+Local, opt-out run log that:
+- Wraps every script's entry point to record arguments, exit code, duration and capped stdout/stderr
+- Adds agent `report`s with a wiki snapshot
+- Writes only to `~/.ouro/runs/`; honours `OURO_RUNLOG=off` and `OURO_HOME`
 
 ### scripts/hooks.py
 Opt-in, declarative automation installer that:

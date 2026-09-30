@@ -67,3 +67,5 @@ In a throwaway repo with a backdated commit, a stale comment and a TODO, the ski
 ## Next
 
 Onboard agent-heavy external repos and record their baselines (the Phase 0 exit check in ADR-011). The numbers decide how much Phase 1 ledger machinery is worth building.
+
+@note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.

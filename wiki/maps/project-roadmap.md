@@ -31,7 +31,8 @@ An observability, interpretability and documentation app for vibecoders and prof
    - Agent Onboarding checklist added to `SKILL.md`.
    - `bootstrap.py` fills in the real skill path.
    - Code Comments & TODOs rule in the protocol and in AGENT.md.
-0. ⬜ **Exit check**: onboard agent-heavy external repos and record their baselines.
+   - Local run log (`runlog.py`, [ADR-012](../decisions/ADR-012-local-run-log.md)) so external test runs can be reviewed.
+0. ⬜ **Exit check**: onboard agent-heavy external repos, review them with `runlog.py show`, and record their baselines.
 1. ⬜ **Claim ledger** (no LLM): `ouro claims`, static HTML in plain-English and technical modes, agent feed through the hooks, `--vault` / `OURO_VAULT`.
 2. ⬜ **Ask & Verify**: explanations, suggested tests, value probes, and one-click local verify with the project's own runner in a throwaway worktree (*inferred* → *verified*).
 3. ⬜ **Trace view and vibecoder flows**: `sys.settrace` trace view from real runs, guided "what happens if…?" flows, vault mode as the default.
