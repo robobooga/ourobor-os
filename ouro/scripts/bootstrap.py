@@ -39,6 +39,38 @@ def skill_path_for_docs(script_dir):
         return f"{prefix}{rel.as_posix()}" if str(rel) != '.' else (prefix.rstrip('/') or '.')
     return skill_dir.as_posix()
 
+def python_command():
+    """The command that launches this interpreter from a shell, so written commands run as-is."""
+    exe = sys.executable
+    if not exe:
+        return 'python3'
+    name = Path(exe).name
+    found = shutil.which(name)
+    if found and Path(found).resolve() == Path(exe).resolve():
+        return name
+    if shutil.which('python3'):
+        return 'python3'
+    return exe
+
+def find_project_docs(root):
+    """Return (docs_dir, adr_dir) as project-relative posix strings; either may be None."""
+    docs_dir = next((d for d in ('docs', 'doc') if (root / d).is_dir()), None)
+    candidates = ['docs/adr', 'docs/adrs', 'docs/decisions', 'doc/adr', 'doc/adrs', 'doc/decisions',
+                  'adr', 'adrs', 'decisions']
+    adr_dir = next((d for d in candidates if (root / d).is_dir()), None)
+    return docs_dir, adr_dir
+
+def existing_docs_section(docs_dir, adr_dir):
+    adr_target = f"`{adr_dir}/`" if adr_dir else "the existing docs directory"
+    return f"""
+### Existing project docs
+
+This project already has docs (`{adr_dir or docs_dir}/`).
+- Existing docs stay the source of truth. Wiki pages link to them instead of duplicating them.
+- Put new ADRs in {adr_target}, not in `ouro/wiki/decisions/`.
+- When code contradicts a statement in those docs, record it in `ouro/wiki/maps/doc-drift.md` and fix the doc.
+"""
+
 def bootstrap(hook_options=None):
     # Source template directory is the skill's wiki directory
     script_dir = Path(__file__).resolve().parent
@@ -89,15 +121,15 @@ Before doing any work, check whether the wiki has already been populated:
 
 - **Initial setup** (no entity files in `ouro/wiki/entities/`): run a full crawl.
   ```bash
-  python <path-to-skill>/scripts/capture.py --crawl
+  <python> <path-to-skill>/scripts/capture.py --crawl
   ```
 - **Ongoing sessions, hooks installed** (`bootstrap.py --install-hooks`): every commit already stages captures automatically. Check for pending work (Claude Code shows this notice at session start):
   ```bash
-  python <path-to-skill>/scripts/capture.py --status
+  <python> <path-to-skill>/scripts/capture.py --status
   ```
 - **Ongoing sessions, no hooks**: run a git-aware crawl to stage only recently changed files.
   ```bash
-  python <path-to-skill>/scripts/capture.py --crawl --git
+  <python> <path-to-skill>/scripts/capture.py --crawl --git
   ```
   To include files from the last N commits: `--crawl --git N` (e.g. `--crawl --git 3`).
 
@@ -109,11 +141,11 @@ Before doing any work, check whether the wiki has already been populated:
 - Use **Doxygen** tags (`@entity`, `@brief`, `@snippet`, etc.) to structure the documentation.
 - Once synthesized, finalize the capture by popping it from the queue:
   ```bash
-  python <path-to-skill>/scripts/capture.py --pop
+  <python> <path-to-skill>/scripts/capture.py --pop
   ```
 
 ### 2. Doxygen Standards
-- Always include an `@entity` and `@brief` tag at the top of entity/pattern files.
+- Include `@entity` and `@brief` tags in the first few lines of entity/pattern files. One optional `# Title` heading may come before `@entity`.
 - Mirror critical code logic using `@snippet` blocks.
 - Highlight architectural notes with `@note` or `@warning`.
 
@@ -144,24 +176,38 @@ Before doing any work, check whether the wiki has already been populated:
 
 ### 7. Verification
 - Ensure `ouro/wiki/index.md` is updated with any new entities, ADRs, patterns, or maps.
-- Maintain a 1:1 parity between code modules and wiki documentation.
+- Keep one entity per meaningful module. A directory or package page is fine for large repos; split it when a page grows.
 """
 
     # Point commands at this install so agents need not locate the skill
     skill_ref = skill_path_for_docs(script_dir)
-    protocol = protocol.replace('<path-to-skill>', skill_ref)
+    py = python_command()
+    docs_dir, adr_dir = find_project_docs(Path.cwd())
+    if docs_dir or adr_dir:
+        print(f"[OK] Existing docs found: {', '.join(d for d in (docs_dir, adr_dir) if d)}")
+        if adr_dir:
+            print(f"[OK] ADRs will go in {adr_dir}/ (not ouro/wiki/decisions/)")
+        protocol += existing_docs_section(docs_dir, adr_dir)
+    protocol = protocol.replace('<path-to-skill>', skill_ref).replace('<python>', py)
 
     # Update all existing instruction files (projects may use multiple LLMs)
     instruction_files = [
-        'CLAUDE.md', 'GEMINI.md', 'CURSOR.md', 'CLINE.md',
+        'AGENTS.md', 'CLAUDE.md', 'GEMINI.md', 'CURSOR.md', 'CLINE.md',
         'AIDER.md', 'CONTINUE.md', 'AI_INSTRUCTIONS.md'
     ]
 
     found_instruction_file = False
+    seen = set()
     for filename in instruction_files:
         file_path = Path.cwd() / filename
         if file_path.exists():
             found_instruction_file = True
+            # Symlinked aliases (CLAUDE.md -> AGENTS.md) would otherwise get the protocol twice
+            resolved = file_path.resolve()
+            if resolved in seen:
+                print(f"[OK] {filename} is an alias of an instruction file already handled.")
+                continue
+            seen.add(resolved)
             content = file_path.read_text(encoding='utf-8')
             if "Ourobor OS Maintenance Protocol" not in content:
                 print(f"[*] Appending Ourobor OS protocol to {filename}...")
@@ -189,13 +235,13 @@ Before doing any work, check whether the wiki has already been populated:
     # Next steps; the hooks step only appears when hooks were not requested
     print("\n[*] Next steps:")
     print("1. Measure comment/TODO debt and save it as a wiki page:")
-    print(f"   python {skill_ref}/scripts/claim_scan.py --wiki")
+    print(f"   {py} {skill_ref}/scripts/claim_scan.py --wiki")
     print("2. Capture your codebase:")
-    print(f"   python {skill_ref}/scripts/capture.py --crawl")
+    print(f"   {py} {skill_ref}/scripts/capture.py --crawl")
     print("3. Have your LLM synthesize ouro/wiki/capture-queue.md into ouro/wiki/ pages, then update ouro/wiki/index.md")
     if hook_options is None:
         print("4. (Optional) Capture on every commit and keep docs in the same commit:")
-        print(f"   python {skill_ref}/scripts/hooks.py install [--capture-on pre-commit] [--docs-check warn|strict] [--commit-gate] [--stop-hook]")
+        print(f"   {py} {skill_ref}/scripts/hooks.py install [--capture-on pre-commit] [--docs-check warn|strict] [--commit-gate] [--stop-hook]")
 
     if 'Claude Code' in detected_llms:
         print("\n[TIP] Claude Code tips:")
