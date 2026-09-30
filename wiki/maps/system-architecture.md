@@ -41,10 +41,11 @@ ourobor-os/
 │   └── dist/                      Generated HTML output (gitignored)
 │
 ├── scripts/
-│   └── package.py                 Packages ouro/ → dist/ouro-skill.zip
+│   ├── package.py                 Packages ouro/ → dist/ouro-skill.zip
+│   └── claim_scan.py              Phase 0 comment/TODO baseline scan (ADR-011)
 │
 ├── docs/
-│   └── PLAN.md                    Original planning document
+│   └── spec-v0.3-sidecar.md       Sidecar vault spec (ADR-011)
 │
 └── dist/
     └── ouro-skill.zip             Distribution artifact
@@ -79,7 +80,8 @@ dist/ouro-skill.zip                → npx skills / direct download → user pro
 | `ouro/` | Distributable skill skeleton | Yes |
 | `wiki/` | Project documentation + example | No |
 | `ouro-webui/` | Optional web rendering layer | No |
-| `scripts/` | Release tooling | No |
+| `scripts/` | Release tooling and experiments | No |
+| `docs/` | Forward-looking specs | No |
 | `dist/` | Build artifacts | No |
 
 See [ADR-001](../decisions/ADR-001-ouro-as-distributable-skeleton.md) and [ADR-002](../decisions/ADR-002-wiki-as-dual-purpose.md) for the reasoning behind the `ouro/` vs `wiki/` separation.

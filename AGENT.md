@@ -28,6 +28,13 @@ The project's living documentation lives in `wiki/` (root level). This directory
 > - Add new ADRs to `wiki/index.md`.
 > Failing to do this is a protocol violation — the wiki is the source of truth, not the code.
 
+### Code Comments & TODOs
+Our own code follows the rule the skill ships (see [ADR-011](wiki/decisions/ADR-011-sidecar-pivot.md)):
+- **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.
+- **Staleness**: Comments drift. When a comment and the code disagree, trust the code, and fix or delete the comment in the same change.
+- **Deferral**: A `TODO`/`FIXME` is not permission to defer work you were asked to do. Finish the task, or record the deferral and its reason in the wiki (capture queue or an ADR) instead of adding a new `TODO` to the code.
+- **Measure**: Run `python scripts/claim_scan.py` before and after larger changes; don't let the stale or `TODO` counts grow. Current baseline: [claim_scan](wiki/entities/claim_scan.md).
+
 ### Doxygen Standards
 - `@entity <name>`: Module/entity defined.
 - `@brief <text>`: One-sentence summary.

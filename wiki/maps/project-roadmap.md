@@ -22,6 +22,17 @@ Establish a compounding, product-agnostic LLM Wiki system (`ouro/wiki/`) support
 4. ✅ Integrate Doxygen tag renderer via regex preprocessing (`@entity`, `@brief`, `@note`, `@warning`).
 5. ✅ Verify generation and portability of the dashboard.
 
+## Phase 3: Sidecar Vault — IN PROGRESS
+
+Destination: a sidecar vault outside the target repo. Work is ordered measure → deterministic ledger → Ask. See [ADR-011](../decisions/ADR-011-sidecar-pivot.md) and `docs/spec-v0.3-sidecar.md`.
+
+0. ✅ **Measure**: `scripts/claim_scan.py` written, and this repo's baseline recorded ([claim_scan](../entities/claim_scan.md)).
+0. ✅ **Rule**: the Code Comments & TODOs section added to the skill protocol and to AGENT.md, and the two stale comments in this repo fixed.
+0. ⬜ **Exit check**: run `claim_scan.py` on an agent-heavy external repo; if the counts are low, stop at the rule.
+1. ⬜ **Claim ledger plus agent feed** (no LLM): `ouro claims`, static HTML, and claims injected by the hooks; `--vault` / `OURO_VAULT` path override.
+2. ⬜ **Ask**: answers, suggested tests or extension points, labelled *inferred*; exported only when the user asks.
+- Deferred: sandbox/*verified* tier, LSP/SCIP, local UI app, LLM "contradicted" judge, advisory Pass Gate, vibecoder surfaces.
+
 ## Verification Criteria
 
 These define what "done" looks like for the current phase:

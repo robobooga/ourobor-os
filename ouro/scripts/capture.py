@@ -5,7 +5,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# Path to the capture queue
+# Project and wiki paths, resolved from the working directory
 PROJECT_ROOT = Path.cwd()
 WIKI_REL = 'ouro/wiki/'
 QUEUE_REL = 'ouro/wiki/capture-queue.md'

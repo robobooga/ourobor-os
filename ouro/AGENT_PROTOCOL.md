@@ -47,7 +47,12 @@ Before doing any work, check whether the wiki has already been populated:
   - **Rationale**: The reasoning behind the final choice.
 - Always link new ADRs in the `ouro/wiki/index.md` file.
 
-### 4. Maintenance Best Practices
+### 4. Code Comments & TODOs
+- **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.
+- **Staleness**: Comments drift. When a comment and the code disagree, trust the code, and fix or delete the comment in the same change.
+- **Deferral**: A `TODO`/`FIXME` is not permission to defer work you were asked to do. Finish the task, or record the deferral and its reason in the wiki (capture queue or an ADR) instead of adding a new `TODO` to the code.
+
+### 5. Maintenance Best Practices
 - **Fragment**: Split files that become too large or cover too many distinct concepts.
 - **Combine**: Merge highly interdependent or undersized files.
 - **Parity**: Maintain 1:1 mapping between code modules and documentation.

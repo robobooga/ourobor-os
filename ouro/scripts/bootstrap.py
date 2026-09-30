@@ -126,7 +126,12 @@ Before doing any work, check whether the wiki has already been populated:
 - **Task tracking**: If your LLM has a task system, use it to track pending synthesis work.
 - **Plan mode**: If your LLM has a planning mode, use it for complex wiki restructuring.
 
-### 6. Verification
+### 6. Code Comments & TODOs
+- **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.
+- **Staleness**: Comments drift. When a comment and the code disagree, trust the code, and fix or delete the comment in the same change.
+- **Deferral**: A `TODO`/`FIXME` is not permission to defer work you were asked to do. Finish the task, or record the deferral and its reason in the wiki (capture queue or an ADR) instead of adding a new `TODO` to the code.
+
+### 7. Verification
 - Ensure `ouro/wiki/index.md` is updated with any new entities, ADRs, patterns, or maps.
 - Maintain a 1:1 parity between code modules and wiki documentation.
 """
@@ -166,7 +171,7 @@ Before doing any work, check whether the wiki has already been populated:
     print("[OK] Bootstrap complete. Ourobor OS is ready!")
     print("="*60)
 
-    # Generic next steps with environment-specific tips
+    # Next steps; the hooks step only appears when hooks were not requested
     print("\n[*] Next steps:")
     print("1. Read the wiki index: ouro/wiki/index.md")
     print("2. Capture your codebase:")

@@ -13,6 +13,7 @@ This is the internal documentation for the Ourobor OS project. It also serves as
 - [hooks.py](entities/hooks.md) — Opt-in, declarative installer for git capture hooks (post- or pre-commit), the pre-commit docs check (warn/strict), the Claude Code SessionStart status hook, the Claude Code commit gate, and the Claude Code Stop hook that has the agent write docs before finishing. Honours `core.hooksPath`.
 - [builder.py](entities/builder.md) — Converts `wiki/*.md` → `ouro-webui/dist/*.html`; processes Doxygen tags via regex, renders Markdown with `mistune`, generates grouped sidebar. Not part of the distributed skill.
 - [package.py](entities/package.md) — Validates `ouro/` structure then zips it to `dist/ouro-skill.zip`. Aborts if required files/dirs are missing. Root-level only, not in the distributed skill.
+- [claim_scan.py](entities/claim_scan.md) — Phase 0 experiment (ADR-011): read-only, stdlib scan of a repo's comments for TODO age, stale comments (code changed more than a day after the comment) and global-sounding wording; includes this repo's baseline. Root-level, not shipped.
 
 ## Architecture Decisions
 - [ADR-001](decisions/ADR-001-ouro-as-distributable-skeleton.md) — `ouro/wiki/` subdirs stay empty (`.gitkeep` only); project docs must not ship to users at install time.
@@ -25,13 +26,14 @@ This is the internal documentation for the Ourobor OS project. It also serves as
 - [ADR-008](decisions/ADR-008-automatic-capture-hooks.md) — Opt-in git post-commit hook stages deduplicated pointer captures; Claude Code SessionStart hook prompts synthesis. LLMs are never called from git.
 - [ADR-009](decisions/ADR-009-pre-commit-docs-hooks.md) — Docs ship with the feature: opt-in pre-commit docs check (warn/strict), Claude Code commit gate, and pre-commit capture mode; one capture mode at a time; declarative install.
 - [ADR-010](decisions/ADR-010-stop-hook-doc-synthesis.md) — Opt-in Claude Code Stop hook blocks once when a turn ends with undocumented changes, so the running agent writes the docs; loop-safe via `stop_hook_active`, once per session per content fingerprint; no separate LLM call.
+- [ADR-011](decisions/ADR-011-sidecar-pivot.md) — Heading to a sidecar vault (`~/.ouro/vaults/<id>/`), phased measure → deterministic claim ledger plus agent feed → Ask. Comments are scoped, time-stamped claims; the protocol now says code wins over comments and a TODO is not permission to defer. This repo follows the same rule. Spec: `docs/spec-v0.3-sidecar.md`.
 
 ## Patterns
 - [Capture-Synthesize Loop](patterns/capture-synthesize-loop.md) — The core workflow: raw code/notes → capture queue → LLM synthesizes into entities/patterns/decisions → `--pop` clears entry → `index.md` updated.
 
 ## Maps
 - [System Architecture](maps/system-architecture.md) — Full directory tree, data flow diagram, and separation-of-concerns table (what ships vs. what doesn't).
-- [Project Roadmap](maps/project-roadmap.md) — Phase 1 (core) and Phase 2 (web UI) both complete; verification criteria met.
+- [Project Roadmap](maps/project-roadmap.md) — Phase 1 (core) and Phase 2 (web UI) complete; Phase 3 (sidecar vault, ADR-011) in progress: Phase 0 measurement and rule done.
 
 ## Capture Queue
 - [Capture Queue](capture-queue.md)
