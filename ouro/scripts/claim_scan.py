@@ -5,10 +5,10 @@ which saves the report to ouro/wiki/maps/comment-baseline.md in the scanned proj
 
 For every code comment in tracked files it reports:
 - TODO-style deferrals (TODO/FIXME/HACK/XXX) with their age from git blame.
-- Stale comments: the code block a comment annotates was modified more than a day after the comment
-  was last touched.
-- Global-sounding comments: absolute wording ("always", "never", "must", ...) that an agent may read
-  as a codebase-wide rule even though it sits in one scope.
+- Stale comments: the first statement a comment annotates was last changed in a different, later
+  commit than the comment itself.
+- Directive-worded comments (review heuristic, not a finding): phrasing like "always", "never",
+  "must" that an agent may read as a codebase-wide rule even though it sits in one scope.
 
 Usage:
     python <path-to-skill>/scripts/claim_scan.py [repo_path] [--json] [--limit N] [--wiki] [--include-skill]
@@ -33,13 +33,14 @@ SLASH_COMMENT_EXTS = {'.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.go', '.rs'
 SKIP_DIRS = {'dist', 'node_modules', 'vendor', '.venv', 'venv', 'build', '__pycache__'}
 
 TODO_RE = re.compile(r'\b(TODO|FIXME|HACK|XXX)\b')
-GLOBAL_RE = re.compile(r"\b(always|never|every|everywhere|must|do not|don't|all callers|only ever)\b", re.I)
+# Directive phrasing only: a comment opening with an imperative or absolute, or using the modal verb.
+# Descriptive uses ("reused every frame") are deliberately not matched.
+GLOBAL_RE = re.compile(r"^(always|never|must|do not|don't|only)\b|\bmust\b", re.I)
 HASH_LINE_RE = re.compile(r'(?:^|\s)#\s?(.*)$')
 SLASH_LINE_RE = re.compile(r'(?:^|\s)//\s?(.*)$')
-MAX_BLOCK_LINES = 20
+MAX_SPAN_LINES = 6  # cap on the annotated statement; long statements are mostly unrelated to the comment
 SECONDS_PER_DAY = 86400
 BASELINE_REL = Path('ouro/wiki/maps/comment-baseline.md')
-STALE_GRACE_SECONDS = SECONDS_PER_DAY  # same-day edits to comment and code are one change, not drift
 
 
 def git(repo, *args):
@@ -63,20 +64,20 @@ def tracked_files(repo, include_skill=False):
     return files
 
 
-def blame_times(repo, rel):
-    """Map 1-indexed line number -> last-modified unix time. Uncommitted lines get the current time."""
+def blame_info(repo, rel):
+    """Map 1-indexed line number -> (commit sha, last-modified unix time). Uncommitted lines get the current time."""
     out = git(repo, 'blame', '--line-porcelain', '-w', '--', str(rel))
     if out is None:
         return {}
-    times, line_no, now = {}, None, int(time.time())
+    info, line_no, sha, now = {}, None, None, int(time.time())
     for row in out.splitlines():
         parts = row.split()
         if len(parts) >= 3 and len(parts[0]) == 40 and parts[1].isdigit() and parts[2].isdigit():
-            line_no = int(parts[2])
-            times[line_no] = now if set(parts[0]) == {'0'} else None
-        elif row.startswith('author-time ') and line_no is not None and times.get(line_no) is None:
-            times[line_no] = int(row.split()[1])
-    return times
+            line_no, sha = int(parts[2]), parts[0]
+            info[line_no] = (sha, now if set(sha) == {'0'} else None)
+        elif row.startswith('author-time ') and line_no is not None and info[line_no][1] is None:
+            info[line_no] = (sha, int(row.split()[1]))
+    return info
 
 
 def python_comments(source):
@@ -133,18 +134,43 @@ def scope_for(line_no, scopes):
     return best[2] if best else '<module>'
 
 
-def annotated_block(line_no, is_trailing, lines, comment_lines):
-    """Line numbers of the code a comment describes: its own line if trailing, else the following block."""
+def python_statements(source):
+    """Map first line -> last line of each statement header (compound statements stop before their body)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return {}
+    spans = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.stmt):
+            end = node.end_lineno
+            body = getattr(node, 'body', None)
+            if isinstance(body, list) and body:
+                end = max(node.lineno, body[0].lineno - 1)
+            for child in ast.walk(node):  # a triple-quoted string's body is data, not what the comment describes
+                if isinstance(child, ast.Constant) and isinstance(child.value, str) and child.end_lineno > child.lineno:
+                    end = min(end, max(node.lineno, child.lineno))
+            spans.setdefault(node.lineno, end)
+    return spans
+
+
+def annotated_span(line_no, is_trailing, lines, comment_lines, statements):
+    """Line numbers of the code a comment describes: its own line if trailing, else the first statement below it."""
     if is_trailing:
         return [line_no]
-    block, i = [], line_no + 1
-    while i <= len(lines) and len(block) < MAX_BLOCK_LINES:
-        if not lines[i - 1].strip():
-            break
-        if i not in comment_lines:
-            block.append(i)
+    i = line_no + 1
+    while i <= len(lines) and (not lines[i - 1].strip() or i in comment_lines):
         i += 1
-    return block
+    if i > len(lines):
+        return []
+    end = min(statements.get(i, i), i + MAX_SPAN_LINES - 1, len(lines))
+    return list(range(i, end + 1))
+
+
+def is_stale(comment_at, span, blame):
+    """True when a span line was last changed by a different commit that is later than the comment's."""
+    comment_sha, comment_time = comment_at
+    return any(blame[n][0] != comment_sha and blame[n][1] > comment_time for n in span if n in blame)
 
 
 def scan_file(repo, rel):
@@ -155,23 +181,22 @@ def scan_file(repo, rel):
         return []
     lines = source.splitlines()
     if rel.suffix == '.py':
-        comments, scopes = python_comments(source), python_scopes(source)
+        comments, scopes, statements = python_comments(source), python_scopes(source), python_statements(source)
     else:
         pattern = SLASH_LINE_RE if rel.suffix in SLASH_COMMENT_EXTS else HASH_LINE_RE
-        comments, scopes = regex_comments(lines, pattern), []
+        comments, scopes, statements = regex_comments(lines, pattern), [], {}
     comments = [c for c in comments if c[1] and not c[1].startswith('!') and 'coding' not in c[1][:20]]
     if not comments:
         return []
 
-    times = blame_times(repo, rel)
+    blame = blame_info(repo, rel)
     comment_lines = {c[0] for c in comments if not c[2]}
     now = time.time()
     records = []
     for line_no, text, is_trailing in comments:
-        written = times.get(line_no)
-        block = annotated_block(line_no, is_trailing, lines, comment_lines)
-        code_times = [times[n] for n in block if times.get(n)]
-        latest_code = max(code_times) if code_times else None
+        written_at = blame.get(line_no)
+        written = written_at[1] if written_at else None
+        span = annotated_span(line_no, is_trailing, lines, comment_lines, statements)
         records.append({
             'file': str(rel),
             'line': line_no,
@@ -179,7 +204,7 @@ def scan_file(repo, rel):
             'text': text[:120],
             'todo': bool(TODO_RE.search(text)),
             'global_wording': bool(GLOBAL_RE.search(text)) and not TODO_RE.search(text),
-            'stale': bool(written and latest_code and not is_trailing and latest_code - written > STALE_GRACE_SECONDS),
+            'stale': bool(written_at and not is_trailing and is_stale(written_at, span, blame)),
             'age_days': round((now - written) / SECONDS_PER_DAY) if written else None,
         })
     return records
@@ -206,8 +231,8 @@ def report_sections(records):
     wording = [r for r in records if r['global_wording']]
     return [
         ('TODO / deferrals (oldest first)', sorted(todos, key=lambda r: -(r['age_days'] or 0))),
-        ('Stale comments (code changed after comment)', sorted(stale, key=lambda r: -(r['age_days'] or 0))),
-        ('Global-sounding comments (review; heuristic is noisy)', sorted(wording, key=lambda r: r['file'])),
+        ('Stale comments (annotated statement changed in a later commit)', sorted(stale, key=lambda r: -(r['age_days'] or 0))),
+        ('Directive-worded comments (review heuristic, not findings)', sorted(wording, key=lambda r: r['file'])),
     ]
 
 
@@ -220,7 +245,8 @@ def format_row(r):
 def print_report(summary, records, limit):
     print("Claim scan (Phase 0 baseline)")
     for key, value in summary.items():
-        print(f"  {key}: {value}")
+        if key != 'global_wording_comments':  # review heuristic: has its own section, stays in JSON
+            print(f"  {key}: {value}")
     for title, rows in report_sections(records):
         print(f"\n## {title}: {len(rows)}")
         for r in rows[:limit]:

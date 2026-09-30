@@ -1,5 +1,5 @@
 @entity claim_scan
-@brief Read-only, stdlib-only scan of a git repo's code comments. It counts TODO deferrals by age, stale comments, and comments worded as global rules. It is shipped in the skill as step 3 of agent onboarding, and it is the seed of the Phase 1 claim ledger.
+@brief Read-only, stdlib-only scan of a git repo's code comments. It counts TODO deferrals by age, stale comments, and (as a review heuristic) comments with directive wording. It is shipped in the skill as step 3 of agent onboarding, and it is the seed of the Phase 1 claim ledger.
 
 ## Overview
 
@@ -29,17 +29,27 @@ python ouro/scripts/claim_scan.py --include-skill
 4. **Blame**: `git blame --line-porcelain -w` gives each line's last-modified time. Uncommitted lines count as "now".
 5. **Classification** per comment:
    - `todo`: matches `TODO|FIXME|HACK|XXX`. `age_days` comes from blame.
-   - `stale`: a full-line comment whose annotated block (the contiguous non-blank code lines below it, up to 20) was modified more than `STALE_GRACE_SECONDS` (one day) after the comment. Trailing comments are never marked stale, because they share a line with their code.
-   - `global_wording`: absolute words (`always`, `never`, `must`, `do not`, ...) in a comment that isn't a TODO.
+   - `stale`: a full-line comment whose annotated span was last changed by a different, later commit than the comment itself (compared by blame SHA and author time; there is no time-grace constant). The span is the first code statement after the comment (skipping blank lines and further comment lines), capped at `MAX_SPAN_LINES` (6). For Python, `ast` gives the statement's line range; a compound statement (`if`, `def`, ...) covers only its header, and a multi-line string ends the span at its first line. Other languages use the single next code line. Trailing comments are never marked stale, because they share a line with their code.
+   - `global_wording`: a review heuristic, not a finding. It matches comments that start with `always`, `never`, `must`, `do not`, `don't` or `only`, or contain `must`. Descriptive uses such as "reused every frame" are not matched. The text report keeps it out of the headline summary and shows it in its own "Directive-worded comments" section; the JSON summary keeps the count under `global_wording_comments`.
 
 @snippet stale-check
 ```python
-stale = written and latest_code and not is_trailing and latest_code - written > STALE_GRACE_SECONDS
+any(blame[n][0] != comment_sha and blame[n][1] > comment_time for n in span if n in blame)
 ```
 
-@warning `global_wording` is a noisy heuristic. On this repo its one hit (`hooks.py`: "...so it is never committed") is accurate and properly scoped. Treat it as a list to review, not as findings.
+@warning Directive wording still over-reports: a comment like "Game logic must stay pure" is a scoped rule that happens to sound global. Treat the list as something to review.
+
+## Precision fix (2026-09-30)
+
+A real onboarding of a 4-day-old, agent-written repo (dabao-dasher, 123 commits) flagged 3 stale comments and 35 of 347 comments as global-sounding. A human review found all 3 stale hits accurate (for example `eslint.config.js` "Game logic must stay pure": other lines in the same config object changed later, not the rule). Two causes:
+- The annotated block was every contiguous non-blank line up to 20, so edits to unrelated neighbouring lines counted. It is now one statement.
+- The one-day grace period says nothing in a fast-moving repo. It was replaced by a commit comparison.
+
+After the change, that repo shows 0 stale comments and 10 directive-worded comments (was 35). The demo repo's `src/money.py` comment ("amounts are always positive; never handle signs", above a line a later commit changed to handle signs) is still flagged stale.
 
 ## Baseline: ourobor-os (2026-09-30)
+
+Measured with the pre-fix rules (block up to 20 lines, one-day grace):
 
 | Metric | Before | After fixing |
 |--------|--------|--------------|
@@ -50,13 +60,15 @@ stale = written and latest_code and not is_trailing and latest_code - written > 
 | Stale comments (1-day grace) | 2 | 0 |
 | Global-wording | 1 (false positive) | 1 |
 
-Without the grace period, 4 of the 6 hits were same-day edits (noise), which is why the grace period was added. The remaining 2 were real:
+Without the grace period, 4 of the 6 hits were same-day edits (noise). The remaining 2 were real:
 - `capture.py`: "Path to the capture queue" sat above a block that had grown to cover project and wiki paths.
 - `bootstrap.py`: the "next steps" comment promised tips that live in a later block.
 
 Both were rewritten.
 
-After the move into the skill and the onboarding work, `--include-skill` scans 7 files and 59 comments: 0 TODOs, 0 stale comments, 1 global-wording hit (the same `hooks.py` false positive). A new `bootstrap.py` comment that said "never" was reworded before commit.
+After the move into the skill and the onboarding work, `--include-skill` scanned 7 files and 59 comments: 0 TODOs, 0 stale comments, 1 global-wording hit (the same `hooks.py` false positive). A new `bootstrap.py` comment that said "never" was reworded before commit.
+
+Current baseline with the statement-span rules (`--include-skill`, 2026-09-30): 8 files, 70 comments, 0 TODOs, 0 stale, 0 directive-worded. (The count of 70 includes this change's own comments.)
 
 ## Verified end-to-end
 
