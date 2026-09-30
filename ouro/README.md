@@ -134,7 +134,7 @@ python <path-to-skill>/scripts/capture.py --crawl --git
 # Include last N commits' worth of changes
 python <path-to-skill>/scripts/capture.py --crawl --git 3
 
-# Crawl entire project (use for initial wiki population)
+# Crawl entire project (initial population; respects .gitignore, stages pointer entries)
 python <path-to-skill>/scripts/capture.py --crawl
 
 # Capture specific directory
@@ -151,6 +151,12 @@ python <path-to-skill>/scripts/capture.py --status
 
 # Finalize/Pop the queue after synthesis
 python <path-to-skill>/scripts/capture.py --pop
+
+# Clear every capture for a module you just documented (paths or globs)
+python <path-to-skill>/scripts/capture.py --done 'src/core/*'
+
+# Embed full file contents instead of pointer entries (larger queue)
+python <path-to-skill>/scripts/capture.py --crawl --content
 ```
 
 ### Automate Capture (Optional)
@@ -189,9 +195,9 @@ python <path-to-skill>/scripts/hooks.py uninstall
 Once initialized, your LLM agent will automatically:
 - Monitor `ouro/wiki/capture-queue.md` for new captures
 - Synthesize captures into structured documentation
-- Maintain 1:1 parity between code and wiki
+- Keep one wiki entity per meaningful module
 - Create Architecture Decision Records (ADRs)
-- Use `python <path-to-skill>/scripts/capture.py --pop` to finalize and clear synthesized entries from the queue.
+- Use `python <path-to-skill>/scripts/capture.py --done <path-or-glob>` (or `--pop` for one entry) to clear synthesized entries from the queue.
 
 You can also:
 - Use your LLM's scheduling features (if available) for recurring wiki maintenance

@@ -130,12 +130,12 @@ Before doing any work, check whether the wiki has already been populated:
 ### 1. Monitor the Capture Queue
 - Regularly read `ouro/wiki/capture-queue.md` using your file reading tool.
 - When new snippets are found, "Synthesize" them into the appropriate `ouro/wiki/entities/`, `ouro/wiki/patterns/`, or `ouro/wiki/maps/` files.
-- **Pointer captures** (entries with `Commit` and `Change` fields instead of content) come from the git hooks (`Commit: staged` when captured at pre-commit): read the current file at `Source` before synthesizing. `Change: deleted` means the file is gone — update or remove its entity.
+- **Pointer captures** (entries with `Commit` and `Change` fields instead of content) come from crawls (`Change: crawl`) and the git hooks (`Commit: staged` when captured at pre-commit): read the current file at `Source` before synthesizing. `Change: deleted` means the file is gone — update or remove its entity.
 - **Ship docs with the change**: when you commit code, update and `git add` the relevant wiki pages in the same commit. If the Ourobor OS docs check or commit gate blocks a commit, document the listed files, stage the wiki pages, and retry. Prefix the commit with `OURO_SKIP_DOCS_CHECK=1` only when the change needs no documentation. If an Ourobor OS Stop hook reports undocumented changes when you finish a task, document them before stopping, or reply briefly why they need no documentation yet.
 - Use **Doxygen** tags (`@entity`, `@brief`, `@snippet`, etc.) to structure the documentation.
-- Once synthesized, finalize the capture by popping it from the queue:
+- Once a file or module is synthesized, clear its entries (exact paths or globs; `--pop` removes one entry at a time). Don't edit `capture-queue.md` by hand:
   ```bash
-  <python> <path-to-skill>/scripts/capture.py --pop
+  <python> <path-to-skill>/scripts/capture.py --done 'src/core/*'
   ```
 
 ### 2. Doxygen Standards
@@ -184,7 +184,7 @@ Before doing any work, check whether the wiki has already been populated:
         protocol += existing_docs_section(docs_dir, adr_dir)
     protocol = protocol.replace('<path-to-skill>', skill_ref).replace('<python>', py)
 
-    # Update all existing instruction files (projects may use multiple LLMs)
+    # Update each instruction file present (projects may use several LLMs); symlinked aliases are handled once
     instruction_files = [
         'AGENTS.md', 'CLAUDE.md', 'GEMINI.md', 'CURSOR.md', 'CLINE.md',
         'AIDER.md', 'CONTINUE.md', 'AI_INSTRUCTIONS.md'

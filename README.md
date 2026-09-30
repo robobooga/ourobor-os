@@ -24,7 +24,8 @@ Ourobor OS solves these by embedding documentation into the development flow and
 - **Doxygen Protocol**: Structured tags (`@entity`, `@brief`, `@snippet`) make Markdown machine-readable and UI-ready.
 - **Automated Capture**: Scripts to crawl your codebase and stage new knowledge for synthesis.
 - **Architecture Mapping**: Dedicated tracks for ADRs (Decisions), Patterns, and Mental Models (Maps).
-- **1:1 Parity**: Maintains a direct mapping between source modules and documentation entities.
+- **Module Pages**: One entity per meaningful module, and a directory-level page is fine for large repos.
+- **Doc Drift**: Flags statements in your existing docs that the code has since contradicted.
 - **Web UI**: A static site generator that turns your wiki into a navigable, browser-ready knowledge base.
 
 ## 📂 Structure
@@ -32,7 +33,7 @@ Ourobor OS solves these by embedding documentation into the development flow and
 Once installed, your project's Brain lives in `ouro/wiki/` (the distributable skeleton shipped with the package):
 - **`index.md`**: The central hub and catalog.
 - **`schema.md`**: The operating manual and Doxygen standards.
-- **`entities/`**: 1:1 mirrored documentation of your codebase.
+- **`entities/`**: Per-module documentation of your codebase.
 - **`decisions/`**: Architecture Decision Records (ADRs).
 - **`patterns/`**: Abstracted, reusable architectural logic.
 - **`capture-queue.md`**: The active capture staging area.

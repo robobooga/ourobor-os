@@ -29,7 +29,7 @@ This document defines the operating manual for this wiki. It mirrors the schema 
 - `index.md`: The central hub and catalog. Always kept up to date.
 - `schema.md`: This file. The operating manual.
 - `capture-queue.md`: Staging area for new knowledge.
-- `entities/`: Documentation for code modules (1:1 with source files).
+- `entities/`: Documentation for code modules (one per meaningful module).
 - `decisions/`: Architecture Decision Records (ADRs).
 - `patterns/`: Abstracted, reusable workflow patterns.
 - `maps/`: High-level data flows and mental models.
