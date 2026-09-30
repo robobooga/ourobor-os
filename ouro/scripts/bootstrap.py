@@ -40,17 +40,11 @@ def skill_path_for_docs(script_dir):
     return skill_dir.as_posix()
 
 def python_command():
-    """The command that launches this interpreter from a shell, so written commands run as-is."""
-    exe = sys.executable
-    if not exe:
-        return 'python3'
-    name = Path(exe).name
-    found = shutil.which(name)
-    if found and Path(found).resolve() == Path(exe).resolve():
-        return name
-    if shutil.which('python3'):
-        return 'python3'
-    return exe
+    """A stable interpreter command for written instructions: unversioned names survive Python upgrades."""
+    for name in ('python3', 'python'):
+        if shutil.which(name):
+            return name
+    return sys.executable or 'python3'
 
 def find_project_docs(root):
     """Return (docs_dir, adr_dir) as project-relative posix strings; either may be None."""
@@ -65,7 +59,7 @@ def existing_docs_section(docs_dir, adr_dir):
     return f"""
 ### Existing project docs
 
-This project already has docs (`{adr_dir or docs_dir}/`).
+This project already has docs (`{docs_dir or adr_dir}/`).
 - Existing docs stay the source of truth. Wiki pages link to them instead of duplicating them.
 - Put new ADRs in {adr_target}, not in `ouro/wiki/decisions/`.
 - When code contradicts a statement in those docs, record it in `ouro/wiki/maps/doc-drift.md` and fix the doc.
