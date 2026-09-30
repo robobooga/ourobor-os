@@ -103,7 +103,10 @@ def enqueue(captures):
         preamble, entries = split_entries(content)
         new_sources = {source for source, _ in captures if source != MANUAL_SOURCE}
         entries = [entry for entry in entries if entry_source(entry) not in new_sources]
-        entries += [text.splitlines() for _, text in captures]
+        # Last capture per source wins; symlinked aliases (CLAUDE.md -> AGENTS.md) resolve to one source
+        latest = {source: i for i, (source, _) in enumerate(captures) if source != MANUAL_SOURCE}
+        entries += [text.splitlines() for i, (source, text) in enumerate(captures)
+                    if source == MANUAL_SOURCE or latest[source] == i]
         QUEUE_PATH.write_text(render_queue(preamble, entries), encoding='utf-8')
         return True
     except Exception as e:

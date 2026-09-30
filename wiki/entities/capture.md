@@ -192,3 +192,5 @@ python ouro/scripts/capture.py --pop
 - `--git` depth uses `HEAD~{depth}` which fails gracefully (silent skip) when the repo has fewer commits than `depth`; the working-tree commands still run.
 
 @note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.
+
+@note `enqueue()` also deduplicates within a batch, keeping the last capture per source. A crawl that reaches the same file twice, for example through a `CLAUDE.md -> AGENTS.md` symlink, stages it once. This was found on a clone of dabao-dasher.
