@@ -1,21 +1,29 @@
 @entity claim_scan
-@brief Phase 0 experiment: a read-only, stdlib-only scan of a git repo's code comments that counts TODO deferrals by age, stale comments, and comments worded as global rules. It gives a baseline before the claim ledger is built.
+@brief Read-only, stdlib-only scan of a git repo's code comments. It counts TODO deferrals by age, stale comments, and comments worded as global rules. It is shipped in the skill as step 3 of agent onboarding, and it is the seed of the Phase 1 claim ledger.
 
 ## Overview
 
-`scripts/claim_scan.py` measures the problem [ADR-011](../decisions/ADR-011-sidecar-pivot.md) is meant to solve (comments and TODOs poisoning agent context) before any ledger or vault code is written. It never calls an LLM and never writes to the repo it scans. It can be pointed at any repo, which makes it the first working piece of the sidecar model.
+`ouro/scripts/claim_scan.py` measures the problem [ADR-011](../decisions/ADR-011-sidecar-pivot.md) is meant to solve (comments and TODOs poisoning agent context) before any ledger or vault code is written. It never calls an LLM. The only thing it writes is the opt-in `--wiki` page. It can be pointed at any repo, which makes it the first working piece of the sidecar model.
 
-@note It lives in root-level `scripts/`, not `ouro/scripts/`. It is an experiment and is not shipped in the skill package until the ledger design settles.
+@note It started as a root-level experiment and moved into the skill so that other projects can run it during onboarding. `scripts/package.py` lists it as a required file.
 
 ## Usage
 
 ```bash
-python scripts/claim_scan.py [repo_path] [--json] [--limit N]
+python <path-to-skill>/scripts/claim_scan.py [repo_path] [--json] [--limit N] [--wiki] [--include-skill]
+```
+
+- `--wiki`: also writes `ouro/wiki/maps/comment-baseline.md` in the scanned project. The page has an `@entity CommentBaseline` header, a summary table, and the top rows of each section. It exits with an error if `ouro/wiki/` doesn't exist. **Never pass it in this repo**, because `ouro/wiki/` here is the empty distributable skeleton ([ADR-001](../decisions/ADR-001-ouro-as-distributable-skeleton.md)).
+- `--include-skill`: by default, files under the skill's own directory are skipped, so a project that commits the skill doesn't scan it. Use this flag when developing Ourobor OS itself.
+
+```bash
+# this repo
+python ouro/scripts/claim_scan.py --include-skill
 ```
 
 ## How it works
 
-1. **Files**: `git ls-files`, restricted to extensions with `#` or `//` line comments. `dist/`, `node_modules/`, `vendor/`, virtualenvs and `build/` are skipped.
+1. **Files**: `git ls-files`, restricted to extensions with `#` or `//` line comments. `dist/`, `node_modules/`, `vendor/`, virtualenvs, `build/` and (by default) the skill's own directory are skipped.
 2. **Comments**: Python files use `tokenize`, so comment-like text inside strings is ignored. Other languages use a line-comment regex (approximate). Shebangs and encoding lines are dropped.
 3. **Scope**: For Python, `ast` resolves the innermost enclosing function or class (for example `bootstrap` or `Cls.method`). Other languages have no scope yet.
 4. **Blame**: `git blame --line-porcelain -w` gives each line's last-modified time. Uncommitted lines count as "now".
@@ -48,6 +56,14 @@ Without the grace period, 4 of the 6 hits were same-day edits (noise), which is 
 
 Both were rewritten.
 
+After the move into the skill and the onboarding work, `--include-skill` scans 7 files and 59 comments: 0 TODOs, 0 stale comments, 1 global-wording hit (the same `hooks.py` false positive). A new `bootstrap.py` comment that said "never" was reworded before commit.
+
+## Verified end-to-end
+
+In a throwaway repo with a backdated commit, a stale comment and a TODO, the skill installed at `.claude/skills/ouro` produced these results:
+- `bootstrap.py` wrote `.claude/skills/ouro/scripts/...` paths into `CLAUDE.md`.
+- `claim_scan.py --wiki` reported the TODO (638d, scope `fee`), the stale comment (scope `parse_amount`) and the global-wording hit, and saved the baseline page. This matches the worked example in the spec.
+
 ## Next
 
-Run it on at least one agent-heavy external repo. If TODO and stale counts are low there too, the simple rule in the maintenance protocol may be enough, and the ledger isn't needed. That is the exit condition in ADR-011.
+Onboard agent-heavy external repos and record their baselines (the Phase 0 exit check in ADR-011). The numbers decide how much Phase 1 ledger machinery is worth building.

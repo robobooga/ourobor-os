@@ -70,6 +70,17 @@ If your LLM tool doesn't have a skills directory:
 
 ## Usage
 
+### Quickest path: let your agent onboard
+
+Ask your agent to **"set up Ourobor OS in this project"**. The **Agent Onboarding** checklist in `SKILL.md` has it:
+1. bootstrap
+2. measure comment/TODO debt
+3. document the key modules
+4. ask you about hooks
+5. report back
+
+The manual steps below do the same thing by hand.
+
 ### Bootstrap a New Project
 
 **What to expect:**
@@ -85,6 +96,19 @@ python ~/.agents/skills/ouro/scripts/bootstrap.py  # Gemini
 # If using manual integration
 python <your-project>/ouro/scripts/bootstrap.py
 ```
+
+### Measure Comment & TODO Debt
+
+**What to expect:**
+A read-only scan (stdlib, no LLM) of the comments in tracked code. It lists `TODO`s by age, stale comments (the code below the comment changed more than a day after the comment was written), and comments worded as global rules ("always", "never", ...) that an agent may over-apply. `--wiki` saves the report to `ouro/wiki/maps/comment-baseline.md`, so the numbers can be compared over time.
+
+```bash
+python <path-to-skill>/scripts/claim_scan.py --wiki     # report + save wiki page
+python <path-to-skill>/scripts/claim_scan.py --json     # machine-readable
+python <path-to-skill>/scripts/claim_scan.py ../other-repo --limit 30
+```
+
+The skill's own files are skipped unless `--include-skill` is passed.
 
 ### Capture Code & Documentation
 
@@ -167,7 +191,7 @@ You can also:
 This unified distribution works across all LLM tools because:
 
 ### ✅ No Hard Dependencies
-- Python 3.x only (standard library)
+- Python 3.9+ only (standard library) and git
 - No LLM-specific APIs or integrations
 - Works with any file reading/writing tool
 
@@ -197,6 +221,7 @@ ouro/
 ├── scripts/
 │   ├── bootstrap.py                 # Smart initialization with environment detection
 │   ├── capture.py                   # Portable capture script
+│   ├── claim_scan.py                # Comment/TODO debt scan (stale comments, TODO age)
 │   └── hooks.py                     # Optional git pre/post-commit and Claude Code hooks
 └── wiki/                            # Template wiki structure
     ├── index.md                     # Wiki hub template
@@ -264,6 +289,12 @@ Portable capture script that:
 - Uses `Path.cwd() / 'ouro'` for portability
 - `--from-commit` / `--from-index` stage lightweight pointer entries (post-/pre-commit hooks); `--check-docs` verifies staged changes include wiki updates; `--status` reports pending captures
 
+### scripts/claim_scan.py
+Read-only comment and TODO debt scan that:
+- Uses `tokenize`/`ast` for Python (scope names such as `Class.method`) and a line-comment regex for other languages
+- Dates each comment and the code it annotates with `git blame`
+- Reports TODO age, stale comments and global-sounding wording; `--wiki` saves `ouro/wiki/maps/comment-baseline.md`
+
 ### scripts/hooks.py
 Opt-in, declarative automation installer that:
 - Maintains marked blocks in the git `post-commit` / `pre-commit` hooks (honours `core.hooksPath`)
@@ -318,4 +349,4 @@ Same as the main Ourobor OS project.
 
 ---
 
-**Ready to build your External Brain?** Install the skill and run the bootstrap script!
+**Ready?** Install the skill and ask your agent to "set up Ourobor OS in this project". `SKILL.md` has the step-by-step onboarding it follows.

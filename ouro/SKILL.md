@@ -1,34 +1,47 @@
 ---
 name: ouro
-description: Portable, compounding LLM wiki foundation (Ourobor OS). Initialize a structured documentation system that evolves with your codebase using Doxygen tags. Works with Claude Code, Gemini CLI, Cursor, and other LLM tools.
+description: Ourobor OS — observability and documentation for your codebase. Onboard a project (bootstrap a living LLM wiki, measure stale comments and old TODOs), explain what code does, and keep docs in sync with code via Doxygen-tagged Markdown. Use when the user asks to set up / onboard Ourobor OS, document or explain a codebase, find stale comments or TODO debt, or maintain the ouro/wiki. Works with Claude Code, Gemini CLI, Cursor, and other LLM tools.
 ---
 
-# Ourobor OS: The Compounding Wiki for LLM Agents
+# Ourobor OS: Observability & Documentation for Your Codebase
 
-Ourobor OS is a portable knowledge system designed to be the "External Brain" for LLM agents. It uses Doxygen tags to create machine-readable documentation that mirrors your codebase, creating a compounding knowledge base that grows with every development session.
+Ourobor OS helps both vibecoders and professional engineers understand their code. It maintains a living wiki that explains what the code does and why, and it flags comments and `TODO`s that can no longer be trusted. The wiki compounds with every session: capture → synthesize → index.
 
-**Platform-agnostic**: Works with Claude Code, Gemini CLI, Cursor, Cline, Aider, Continue, and any LLM tool that can read files and execute commands.
+**Platform-agnostic**: Works with Claude Code, Gemini CLI, Cursor, Cline, Aider, Continue, and any LLM tool that can read files and run commands. Needs Python 3.9+ (standard library only) and git.
 
-## 🚀 Getting Started (Bootstrap)
+## 🚀 Agent Onboarding (do this on the user's behalf)
 
-To initialize Ourobor OS in your project:
+When a user asks you to set up or onboard Ourobor OS, run these steps from the **project root** in order. Every step is safe to re-run. Only step 5 needs the user's input.
 
-### Bootstrap Workflow
-1. **Locate the skill path** - Find where this ouro skill is installed
-2. **Run the bootstrap script**:
+1. **Locate the skill.** Use the directory containing this `SKILL.md`, referred to below as `<path-to-skill>`. Typical locations are `.claude/skills/ouro`, `.agents/skills/ouro`, `~/.claude/skills/ouro`, `~/.agents/skills/ouro`, or `./ouro`.
+2. **Bootstrap.**
    ```bash
    python <path-to-skill>/scripts/bootstrap.py
    ```
-3. **Verify initialization**:
-   - Check that `ouro/wiki/` directory was created
-   - Verify that your LLM instruction file was updated with maintenance protocols
+   This creates `ouro/wiki/` and appends the maintenance protocol to the instruction files it finds (`CLAUDE.md`, `GEMINI.md`, ...), with `<path-to-skill>` already filled in. It is idempotent.
+3. **Measure comment and TODO debt** (git repos only; read-only apart from the saved page):
+   ```bash
+   python <path-to-skill>/scripts/claim_scan.py --wiki
+   ```
+   This saves `ouro/wiki/maps/comment-baseline.md`, which lists `TODO`s by age, stale comments (the code changed after the comment was written) and comments worded as global rules. No LLM is called.
+4. **Populate the wiki.**
+   ```bash
+   python <path-to-skill>/scripts/capture.py --crawl
+   ```
+   Then synthesize the queue (see Maintenance Workflow): write entity pages for the most important modules first, add them to `ouro/wiki/index.md`, and pop each capture you finish. On a large repo, do the top 5–10 modules now and tell the user how many captures remain.
+5. **Ask the user about hooks** (optional). Offer:
+   ```bash
+   python <path-to-skill>/scripts/hooks.py install --docs-check warn --stop-hook
+   ```
+   This captures on every commit, warns when code ships without docs, and (in Claude Code) has the agent write docs before it finishes a turn. Install only if the user agrees.
+6. **Report back** in a few lines:
+   - what was created
+   - the baseline numbers: TODO count and oldest age, stale comments, global-wording comments
+   - the 3 most notable stale comments or TODOs, as `file:line`
+   - which modules are documented so far and how many captures are pending
+   - whether hooks were installed
 
-The bootstrap script will:
-- Create the `ouro/wiki/` directory structure
-- Set up subdirectories: `entities/`, `decisions/`, `patterns/`, `maps/`
-- Copy template files (`index.md`, `schema.md`, `capture-queue.md`)
-- Append maintenance protocols to your instruction file (CLAUDE.md, GEMINI.md, etc.)
-- Detect your LLM environment and provide relevant tips
+After onboarding, follow the protocol appended to the instruction file. In particular, **comments apply only to their own scope; code wins over a stale comment; a `TODO` is not permission to defer requested work.**
 
 ### Automatic Capture (optional)
 Skip running capture by hand after every change by installing hooks:
@@ -151,6 +164,7 @@ ouro/
     ├── decisions/            # Architecture Decision Records (ADRs)
     ├── patterns/             # Reusable architectural patterns
     └── maps/                 # High-level mental models and data flows
+        └── comment-baseline.md  # claim_scan.py --wiki output (regenerate, do not hand-edit)
 ```
 
 ## 💡 Best Practices
@@ -227,18 +241,21 @@ Consider setting up these recurring workflows:
 
 Here's a typical session with Ourobor OS:
 
-1. **Start of session**: "Read the capture queue and show me what needs synthesis"
-2. **Synthesis**: "Create an entity file for the AuthService module based on the captures"
-3. **Track work**: "Create a task to document the new payment patterns" (if supported)
-4. **Schedule**: "Set up a weekly reminder to review the wiki capture queue" (if supported)
-5. **Verify**: "Check if all modules in src/ have corresponding wiki entities"
+1. **Onboard**: "Set up Ourobor OS in this project" (the agent follows Agent Onboarding above)
+2. **Explain**: "Explain what src/billing does, and tell me which of its comments are stale"
+3. **Start of session**: "Read the capture queue and show me what needs synthesis"
+4. **Synthesis**: "Create an entity file for the AuthService module based on the captures"
+5. **Track work**: "Create a task to document the new payment patterns" (if supported)
+6. **Schedule**: "Set up a weekly reminder to review the wiki capture queue" (if supported)
+7. **Verify**: "Check if all modules in src/ have corresponding wiki entities"
 
 ## 📚 Additional Resources
 
 - Read `ouro/wiki/schema.md` for detailed Doxygen protocol
 - Read `ouro/wiki/index.md` to see what's already documented
+- Read `ouro/wiki/maps/comment-baseline.md` for stale comments and TODO debt (re-run `claim_scan.py --wiki` to refresh)
 - Check `ouro/wiki/capture-queue.md` regularly for new captures
 
 ---
 
-**Ready to start?** Run the bootstrap script and let your LLM help you build your External Brain!
+**Ready to start?** Ask your agent to "set up Ourobor OS in this project".

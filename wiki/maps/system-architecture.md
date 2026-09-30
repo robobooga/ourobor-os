@@ -7,12 +7,13 @@
 ourobor-os/
 │
 ├── ouro/                          [Distributable Skill Package]  ← shipped to users
-│   ├── SKILL.md                   npx skills entry point & description
+│   ├── SKILL.md                   npx skills entry point, description, Agent Onboarding checklist
 │   ├── AGENT_PROTOCOL.md          LLM maintenance protocol (appended by bootstrap.py)
 │   ├── README.md                  Skill-level quick start
 │   ├── scripts/
 │   │   ├── capture.py             Knowledge ingestion tooling
 │   │   ├── bootstrap.py           One-time project initialization
+│   │   ├── claim_scan.py          Comment/TODO debt scan (stale comments, TODO age)
 │   │   └── hooks.py               Opt-in git pre/post-commit + Claude Code hooks
 │   └── wiki/                      Clean skeleton — empty subdirs only
 │       ├── index.md               Template hub
@@ -27,7 +28,7 @@ ourobor-os/
 │   ├── index.md                   Project wiki hub
 │   ├── schema.md                  Doxygen protocol reference
 │   ├── capture-queue.md           Active staging area
-│   ├── entities/                  Module docs (capture, bootstrap, builder, package)
+│   ├── entities/                  Module docs (capture, bootstrap, claim_scan, hooks, builder, package)
 │   ├── decisions/                 ADRs (001–004)
 │   ├── patterns/                  Capture-synthesize loop
 │   └── maps/                      This file
@@ -41,8 +42,7 @@ ourobor-os/
 │   └── dist/                      Generated HTML output (gitignored)
 │
 ├── scripts/
-│   ├── package.py                 Packages ouro/ → dist/ouro-skill.zip
-│   └── claim_scan.py              Phase 0 comment/TODO baseline scan (ADR-011)
+│   └── package.py                 Packages ouro/ → dist/ouro-skill.zip
 │
 ├── docs/
 │   └── spec-v0.3-sidecar.md       Sidecar vault spec (ADR-011)
@@ -80,7 +80,7 @@ dist/ouro-skill.zip                → npx skills / direct download → user pro
 | `ouro/` | Distributable skill skeleton | Yes |
 | `wiki/` | Project documentation + example | No |
 | `ouro-webui/` | Optional web rendering layer | No |
-| `scripts/` | Release tooling and experiments | No |
+| `scripts/` | Release tooling | No |
 | `docs/` | Forward-looking specs | No |
 | `dist/` | Build artifacts | No |
 

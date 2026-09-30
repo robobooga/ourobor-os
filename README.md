@@ -1,6 +1,6 @@
-# Ourobor OS: The Living Project Documentation Ecosystem
+# Ourobor OS: Observability & Documentation for Your Codebase
 
-Ourobor OS is an AI-native "operating system" for project documentation — a self-renewing knowledge base that embeds capture directly into your development workflow so docs stay synchronized with your code.
+Ourobor OS helps vibecoders and professional engineers alike understand their code. It keeps a living, LLM-maintained wiki that explains what the code does and why, flags comments and `TODO`s that can no longer be trusted, and is heading toward letting you question the code and test values directly (see the [roadmap](#-roadmap)). Capture is built into your development workflow, so the docs stay in sync with the code.
 
 > Inspired by the *Ouroboros*, the ancient symbol of a snake eating its own tail: as you develop, the system captures knowledge, which informs future development, which in turn updates the documentation. A cycle that continuously feeds on its own evolution.
 
@@ -78,19 +78,21 @@ git clone https://github.com/robobooga/ourobor-os.git
 cp -r ourobor-os/ouro ./
 ```
 
-### 2. Integration
-Enable the agent by appending the maintenance protocols to your project's instructions (e.g., `GEMINI.md` or `CLAUDE.md`). See `ouro/AGENT_PROTOCOL.md` for the full protocol.
+### 2. Onboard (let your agent do it)
+Ask your agent: **"Set up Ourobor OS in this project."** It follows the Agent Onboarding checklist in [`ouro/SKILL.md`](ouro/SKILL.md), and every step is safe to re-run:
+1. Bootstrap `ouro/wiki/` and add the maintenance protocol to your instruction file.
+2. Measure comment/TODO debt and save it as a wiki page.
+3. Document your key modules.
+4. Ask whether you want hooks.
+5. Report what it found.
 
-### 3. Usage
-Run the capture script to scan your project for Doxygen tags:
+### 3. Or run it by hand
 ```
-python ./ouro/scripts/capture.py --crawl
+python ./ouro/scripts/bootstrap.py                  # create ouro/wiki/ + protocol
+python ./ouro/scripts/claim_scan.py --wiki          # stale comments, TODO age → ouro/wiki/maps/comment-baseline.md
+python ./ouro/scripts/capture.py --crawl            # stage code for your agent to document
 ```
-
-Or, initialize the system in a new project:
-```
-python ./ouro/scripts/bootstrap.py
-```
+Replace `./ouro` with wherever the skill was installed (for example `.claude/skills/ouro` or `.agents/skills/ouro`).
 
 To stop running capture by hand, opt in to hooks. A git post-commit hook stages every committed file, and a Claude Code SessionStart hook tells your agent what's pending:
 ```
@@ -109,9 +111,10 @@ python ./ouro/scripts/hooks.py install --docs-check strict --commit-gate --stop-
 
 ## 🌟 Roadmap
 
-Ourobor OS currently ships as an **Agent Skill** for seamless IDE integration, with a **Web UI** for publishing your wiki as a static site. Planned extensions include:
-- **Auxiliary Tooling**: Specialized utilities for documentation maintenance, validation, and analytics.
-- **Holistic Integration**: A unified standard for AI-assisted project management where documentation is the primary interface for both developers and agents.
+Ourobor OS currently ships as an **Agent Skill** for seamless IDE integration, with a **Web UI** for publishing your wiki as a static site. Next, per [ADR-011](wiki/decisions/ADR-011-sidecar-pivot.md) and the [sidecar spec](docs/spec-v0.3-sidecar.md):
+- **Claim ledger**: every comment tracked with its scope and whether it's still current, shown to you and fed to your agent.
+- **Ask & verify**: plain-English explanations of your code, suggested tests for "does `abc()` handle numbers?", and a one-click run with your project's own test runner to confirm the answer.
+- **Sidecar vault**: the same wiki, kept outside your repo.
 
 ## 📖 Learn More
 - Navigate to the [Wiki Index](./ouro/wiki/index.md) to explore the system's full capabilities.

@@ -30,7 +30,7 @@ Orchestrates the full initialization sequence:
 1. Calls `detect_llm_environment()` and reports findings.
 2. Creates `ouro/wiki/` and subdirectories (`entities/`, `decisions/`, `patterns/`, `maps/`) if they don't already exist.
 3. Copies template files (`index.md`, `schema.md`, `capture-queue.md`) from the skill's own `wiki/` directory.
-4. Iterates over known instruction filenames and appends the maintenance protocol to each one found.
+4. Iterates over known instruction filenames and appends the maintenance protocol to each one found. Before appending, every `<path-to-skill>` placeholder in the protocol is replaced with the actual skill location from `skill_path_for_docs()`: project-relative if the skill is inside the project (for example `.claude/skills/ouro`), `~/`-relative if it is under the home directory, and absolute otherwise. Agents in later sessions can then run commands without having to find the skill.
 5. If no instruction file is found, creates one using the detected primary filename (fallback: `AI_INSTRUCTIONS.md`).
 6. If `hook_options` is set (`--install-hooks`), calls `hooks.install(hook_options)`. Remaining CLI flags (`--capture-on`, `--docs-check`, `--commit-gate`) are parsed by `hooks.install_parser()` **before** any files are touched, so a typo fails fast. Otherwise the next-steps output suggests `hooks.py install`. See [hooks](hooks.md).
 
@@ -52,6 +52,8 @@ python <path-to-skill>/scripts/bootstrap.py --install-hooks
 # Any hooks.py install flags can be passed through
 python <path-to-skill>/scripts/bootstrap.py --install-hooks --docs-check strict --commit-gate
 ```
+
+@note After bootstrapping, the next steps printed are: run `claim_scan.py --wiki` (comment/TODO baseline), run `capture.py --crawl`, have the LLM synthesize, and optionally install hooks. These are the same steps as the Agent Onboarding checklist in `SKILL.md`.
 
 @note The maintenance protocol text is defined as an inline string inside `bootstrap()`. If the protocol changes, it must be updated in both `bootstrap.py` and `ouro/AGENT_PROTOCOL.md` to stay in sync.
 

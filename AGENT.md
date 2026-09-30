@@ -33,7 +33,7 @@ Our own code follows the rule the skill ships (see [ADR-011](wiki/decisions/ADR-
 - **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.
 - **Staleness**: Comments drift. When a comment and the code disagree, trust the code, and fix or delete the comment in the same change.
 - **Deferral**: A `TODO`/`FIXME` is not permission to defer work you were asked to do. Finish the task, or record the deferral and its reason in the wiki (capture queue or an ADR) instead of adding a new `TODO` to the code.
-- **Measure**: Run `python scripts/claim_scan.py` before and after larger changes; don't let the stale or `TODO` counts grow. Current baseline: [claim_scan](wiki/entities/claim_scan.md).
+- **Measure**: Run `python ouro/scripts/claim_scan.py --include-skill` before and after larger changes; don't let the stale or `TODO` counts grow. Record the baseline in [claim_scan](wiki/entities/claim_scan.md). Never pass `--wiki` in this repo: it writes into `ouro/wiki/`, which must stay an empty skeleton ([ADR-001](wiki/decisions/ADR-001-ouro-as-distributable-skeleton.md)).
 
 ### Doxygen Standards
 - `@entity <name>`: Module/entity defined.

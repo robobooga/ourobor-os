@@ -28,6 +28,17 @@ def detect_llm_environment():
 
     return detected, primary_instruction_file
 
+def skill_path_for_docs(script_dir):
+    """How instruction files should refer to the skill: project-relative, ~-relative, or absolute."""
+    skill_dir = script_dir.parent
+    for base, prefix in ((Path.cwd(), ''), (Path.home(), '~/')):
+        try:
+            rel = skill_dir.relative_to(base)
+        except ValueError:
+            continue
+        return f"{prefix}{rel.as_posix()}" if str(rel) != '.' else (prefix.rstrip('/') or '.')
+    return skill_dir.as_posix()
+
 def bootstrap(hook_options=None):
     # Source template directory is the skill's wiki directory
     script_dir = Path(__file__).resolve().parent
@@ -136,6 +147,10 @@ Before doing any work, check whether the wiki has already been populated:
 - Maintain a 1:1 parity between code modules and wiki documentation.
 """
 
+    # Point commands at this install so agents need not locate the skill
+    skill_ref = skill_path_for_docs(script_dir)
+    protocol = protocol.replace('<path-to-skill>', skill_ref)
+
     # Update all existing instruction files (projects may use multiple LLMs)
     instruction_files = [
         'CLAUDE.md', 'GEMINI.md', 'CURSOR.md', 'CLINE.md',
@@ -173,15 +188,14 @@ Before doing any work, check whether the wiki has already been populated:
 
     # Next steps; the hooks step only appears when hooks were not requested
     print("\n[*] Next steps:")
-    print("1. Read the wiki index: ouro/wiki/index.md")
+    print("1. Measure comment/TODO debt and save it as a wiki page:")
+    print(f"   python {skill_ref}/scripts/claim_scan.py --wiki")
     print("2. Capture your codebase:")
-    print(f"   python {script_dir}/capture.py --crawl")
-    print("3. Monitor the capture queue:")
-    print("   Ask your LLM to read ouro/wiki/capture-queue.md")
-    print("4. Synthesize captures into structured documentation")
+    print(f"   python {skill_ref}/scripts/capture.py --crawl")
+    print("3. Have your LLM synthesize ouro/wiki/capture-queue.md into ouro/wiki/ pages, then update ouro/wiki/index.md")
     if hook_options is None:
-        print("5. (Optional) Capture on every commit and keep docs in the same commit:")
-        print(f"   python {script_dir}/hooks.py install [--capture-on pre-commit] [--docs-check warn|strict] [--commit-gate] [--stop-hook]")
+        print("4. (Optional) Capture on every commit and keep docs in the same commit:")
+        print(f"   python {skill_ref}/scripts/hooks.py install [--capture-on pre-commit] [--docs-check warn|strict] [--commit-gate] [--stop-hook]")
 
     if 'Claude Code' in detected_llms:
         print("\n[TIP] Claude Code tips:")

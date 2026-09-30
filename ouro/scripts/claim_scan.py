@@ -1,6 +1,7 @@
 """Phase 0 claim scan: measure comment/TODO debt in a git repo before building the claim ledger.
 
-Read-only. Stdlib only. Never calls an LLM and never writes to the scanned repo.
+Read-only by default. Stdlib only. Never calls an LLM. The only write is the opt-in `--wiki` flag,
+which saves the report to ouro/wiki/maps/comment-baseline.md in the scanned project.
 
 For every code comment in tracked files it reports:
 - TODO-style deferrals (TODO/FIXME/HACK/XXX) with their age from git blame.
@@ -10,7 +11,7 @@ For every code comment in tracked files it reports:
   as a codebase-wide rule even though it sits in one scope.
 
 Usage:
-    python scripts/claim_scan.py [repo_path] [--json] [--limit N]
+    python <path-to-skill>/scripts/claim_scan.py [repo_path] [--json] [--limit N] [--wiki] [--include-skill]
 
 See wiki/entities/claim_scan.md and ADR-011.
 """
@@ -23,6 +24,7 @@ import subprocess
 import sys
 import time
 import tokenize
+from datetime import date
 from pathlib import Path
 
 HASH_COMMENT_EXTS = {'.py', '.sh', '.bash', '.zsh', '.rb', '.pl', '.r', '.yaml', '.yml', '.toml'}
@@ -36,6 +38,7 @@ HASH_LINE_RE = re.compile(r'(?:^|\s)#\s?(.*)$')
 SLASH_LINE_RE = re.compile(r'(?:^|\s)//\s?(.*)$')
 MAX_BLOCK_LINES = 20
 SECONDS_PER_DAY = 86400
+BASELINE_REL = Path('ouro/wiki/maps/comment-baseline.md')
 STALE_GRACE_SECONDS = SECONDS_PER_DAY  # same-day edits to comment and code are one change, not drift
 
 
@@ -45,13 +48,15 @@ def git(repo, *args):
     return result.stdout if result.returncode == 0 else None
 
 
-def tracked_files(repo):
-    """Tracked code files with a supported comment syntax, excluding vendored/build dirs."""
+def tracked_files(repo, include_skill=False):
+    """Tracked code files with a supported comment syntax, excluding vendored/build dirs and (by default) this skill."""
     out = git(repo, 'ls-files') or ''
+    skill_dir = Path(__file__).resolve().parent.parent
     files = []
     for rel in out.splitlines():
         path = Path(rel)
-        if SKIP_DIRS.intersection(path.parts):
+        in_skill = (repo / path).resolve().is_relative_to(skill_dir)
+        if SKIP_DIRS.intersection(path.parts) or (in_skill and not include_skill):
             continue
         if path.suffix in HASH_COMMENT_EXTS or path.suffix in SLASH_COMMENT_EXTS:
             files.append(path)
@@ -194,21 +199,61 @@ def summarize(records, files_scanned):
     }
 
 
+def report_sections(records):
+    """(title, rows) for each report section, each sorted for display."""
+    todos = [r for r in records if r['todo']]
+    stale = [r for r in records if r['stale']]
+    wording = [r for r in records if r['global_wording']]
+    return [
+        ('TODO / deferrals (oldest first)', sorted(todos, key=lambda r: -(r['age_days'] or 0))),
+        ('Stale comments (code changed after comment)', sorted(stale, key=lambda r: -(r['age_days'] or 0))),
+        ('Global-sounding comments (review; heuristic is noisy)', sorted(wording, key=lambda r: r['file'])),
+    ]
+
+
+def format_row(r):
+    scope = f" [{r['scope']}]" if r['scope'] else ''
+    age = f"{r['age_days']}d" if r['age_days'] is not None else '?'
+    return f"{r['file']}:{r['line']}{scope} ({age}) {r['text']}"
+
+
 def print_report(summary, records, limit):
     print("Claim scan (Phase 0 baseline)")
     for key, value in summary.items():
         print(f"  {key}: {value}")
-    sections = [
-        ('TODO / deferrals (oldest first)', [r for r in records if r['todo']], lambda r: -(r['age_days'] or 0)),
-        ('Stale comments (code changed after comment)', [r for r in records if r['stale']], lambda r: -(r['age_days'] or 0)),
-        ('Global-sounding comments', [r for r in records if r['global_wording']], lambda r: r['file']),
-    ]
-    for title, rows, key in sections:
+    for title, rows in report_sections(records):
         print(f"\n## {title}: {len(rows)}")
-        for r in sorted(rows, key=key)[:limit]:
-            scope = f" [{r['scope']}]" if r['scope'] else ''
-            age = f"{r['age_days']}d" if r['age_days'] is not None else '?'
-            print(f"  {r['file']}:{r['line']}{scope} ({age}) {r['text']}")
+        for r in rows[:limit]:
+            print(f"  {format_row(r)}")
+
+
+def write_wiki_page(root, summary, records, limit):
+    """Save the report as a wiki map page in the scanned project; returns the path written."""
+    wiki_dir = root / 'ouro' / 'wiki'
+    if not wiki_dir.is_dir():
+        sys.exit(f"[!] No ouro/wiki/ in {root}. Run bootstrap.py first, or omit --wiki.")
+    lines = [
+        '@entity CommentBaseline',
+        '@brief Comment and TODO debt measured by claim_scan.py: TODO age, stale comments, and comments '
+        'worded as global rules. Re-run to compare.',
+        '',
+        f'Generated {date.today().isoformat()} by `claim_scan.py --wiki`. Regenerate rather than hand-edit.',
+        '',
+        '## Summary',
+        '',
+        '| Metric | Value |',
+        '|--------|-------|',
+        *[f'| {key} | {value} |' for key, value in summary.items()],
+    ]
+    for title, rows in report_sections(records):
+        lines += ['', f'## {title}: {len(rows)}', '']
+        lines += [f'- `{format_row(r)}`' for r in rows[:limit]] or ['None.']
+        if len(rows) > limit:
+            lines.append(f'- ...and {len(rows) - limit} more (`--limit` to show more)')
+    path = root / BASELINE_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    return path
 
 
 def main():
@@ -216,6 +261,10 @@ def main():
     parser.add_argument('repo', nargs='?', default='.', help='Path to a git repository (default: cwd)')
     parser.add_argument('--json', action='store_true', help='Emit summary and records as JSON')
     parser.add_argument('--limit', type=int, default=15, help='Rows per section in the text report')
+    parser.add_argument('--include-skill', action='store_true',
+                        help="Also scan the Ourobor OS skill's own files (for developing the skill itself)")
+    parser.add_argument('--wiki', action='store_true',
+                        help=f'Also save the report to {BASELINE_REL} in the scanned project')
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -223,13 +272,16 @@ def main():
         sys.exit(f"[!] Not a git repository: {repo}")
     root = Path(git(repo, 'rev-parse', '--show-toplevel').strip())
 
-    files = tracked_files(root)
+    files = tracked_files(root, args.include_skill)
     records = [rec for rel in files for rec in scan_file(root, rel)]
     summary = summarize(records, len(files))
     if args.json:
         print(json.dumps({'summary': summary, 'records': records}, indent=2))
     else:
         print_report(summary, records, args.limit)
+    if args.wiki:
+        path = write_wiki_page(root, summary, records, args.limit)
+        print(f"\n[OK] Saved baseline to {path.relative_to(root)}", file=sys.stderr if args.json else sys.stdout)
 
 
 if __name__ == '__main__':

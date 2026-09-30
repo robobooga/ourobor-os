@@ -22,16 +22,20 @@ Establish a compounding, product-agnostic LLM Wiki system (`ouro/wiki/`) support
 4. ✅ Integrate Doxygen tag renderer via regex preprocessing (`@entity`, `@brief`, `@note`, `@warning`).
 5. ✅ Verify generation and portability of the dashboard.
 
-## Phase 3: Sidecar Vault — IN PROGRESS
+## Phase 3: Observability App & Sidecar Vault — IN PROGRESS
 
-Destination: a sidecar vault outside the target repo. Work is ordered measure → deterministic ledger → Ask. See [ADR-011](../decisions/ADR-011-sidecar-pivot.md) and `docs/spec-v0.3-sidecar.md`.
+An observability, interpretability and documentation app for vibecoders and professionals: explain code, and test values or debug more easily. See [ADR-011](../decisions/ADR-011-sidecar-pivot.md) and `docs/spec-v0.3-sidecar.md` (v0.3.2).
 
-0. ✅ **Measure**: `scripts/claim_scan.py` written, and this repo's baseline recorded ([claim_scan](../entities/claim_scan.md)).
-0. ✅ **Rule**: the Code Comments & TODOs section added to the skill protocol and to AGENT.md, and the two stale comments in this repo fixed.
-0. ⬜ **Exit check**: run `claim_scan.py` on an agent-heavy external repo; if the counts are low, stop at the rule.
-1. ⬜ **Claim ledger plus agent feed** (no LLM): `ouro claims`, static HTML, and claims injected by the hooks; `--vault` / `OURO_VAULT` path override.
-2. ⬜ **Ask**: answers, suggested tests or extension points, labelled *inferred*; exported only when the user asks.
-- Deferred: sandbox/*verified* tier, LSP/SCIP, local UI app, LLM "contradicted" judge, advisory Pass Gate, vibecoder surfaces.
+0. ✅ **Measure and onboard**:
+   - `ouro/scripts/claim_scan.py` shipped in the skill ([claim_scan](../entities/claim_scan.md)), with `--wiki` baseline pages.
+   - Agent Onboarding checklist added to `SKILL.md`.
+   - `bootstrap.py` fills in the real skill path.
+   - Code Comments & TODOs rule in the protocol and in AGENT.md.
+0. ⬜ **Exit check**: onboard agent-heavy external repos and record their baselines.
+1. ⬜ **Claim ledger** (no LLM): `ouro claims`, static HTML in plain-English and technical modes, agent feed through the hooks, `--vault` / `OURO_VAULT`.
+2. ⬜ **Ask & Verify**: explanations, suggested tests, value probes, and one-click local verify with the project's own runner in a throwaway worktree (*inferred* → *verified*).
+3. ⬜ **Trace view and vibecoder flows**: `sys.settrace` trace view from real runs, guided "what happens if…?" flows, vault mode as the default.
+- Deferred: isolated sandbox (for untrusted repos), LSP/SCIP, local UI app, LLM "contradicted" judge, advisory Pass Gate, vault sync.
 
 ## Verification Criteria
 
