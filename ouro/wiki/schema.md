@@ -10,8 +10,8 @@ This document defines the "Operating Manual" for the LLM Wiki. It uses **Doxygen
 ## 2. Doxygen Tags
 | Tag | Description |
 | --- | --- |
-| `@entity <name>` | Defines the module or entity this file documents. |
-| `@brief <text>` | A one-sentence summary of the entity. |
+| `@entity <name>` | Defines the module or entity this file documents. An optional single `#` title heading may precede it; it must appear within the first few lines. |
+| `@brief <text>` | A one-sentence summary of the entity. Place it right after `@entity`. |
 | `@snippet <id>` | Identifies a code block that is critical for understanding. |
 | `@note <text>` | Important information for developers. |
 | `@warning <text>` | Critical alerts regarding side effects or risks. |
@@ -22,7 +22,7 @@ This document defines the "Operating Manual" for the LLM Wiki. It uses **Doxygen
 - **Capture**: New code snippets are staged in `wiki/capture-queue.md`.
 - **Synthesis**: The LLM must periodically process the queue and update `wiki/entities/`, `wiki/patterns/`, or `wiki/maps/` as appropriate.
 - **ADR**: Major architectural decisions must be recorded in `wiki/decisions/` capturing context, alternatives, trade-offs, and rationale.
-- **Parity**: Maintain a 1:1 mapping between `src/` modules and `wiki/entities/` files.
+- **Parity**: Keep one entity per meaningful module. A directory or package page is fine for large repos; split it when a page grows.
 
 ## 4. Directory Structure
 - `index.md`: The central hub.
