@@ -23,7 +23,7 @@ This applies to `bootstrap.py` (whose inline `__main__` code became `main()`), `
 - `run(script, main)`: tees `sys.stdout` and `sys.stderr` through `_Tee`, which keeps the first `OUTPUT_CAP` (8000) characters of each, then calls `main()`. It records the exit code from `SystemExit` (the message if `sys.exit("...")`) or `1` plus the exception text, and always re-raises. If `enabled()` is false, it calls `main()` directly.
 - `append(event, root=None)`: adds `ts`, `project` and `skill_dir`, then appends one JSON line. Every error is swallowed.
 - `project_root(start)`: the git top-level, falling back to the directory itself. `run_dir(root)` is `OURO_HOME/runs/<name>-<sha1(path)[:8]>`.
-- `wiki_snapshot(root)`: git HEAD; each `ouro/wiki/**/*.md` page's path, byte size and whether it has an `@entity` header; pending captures, parsed with `capture.split_entries`; and the root `*.md` files that contain the maintenance protocol.
+- `wiki_snapshot(root)`: git HEAD; each `ouro/wiki/**/*.md` page's path, byte size and whether `@entity` appears in its first 5 non-blank lines (pages usually open with a `# Title` line first); pending captures, parsed with `capture.split_entries`; and the root `*.md` files that contain the maintenance protocol.
 
 ## CLI
 

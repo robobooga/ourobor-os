@@ -36,21 +36,30 @@ Queue parsing helpers shared by `enqueue()`, `pop()`, and `count_pending()`. An 
 
 The filter chain shared by `crawl()`, `crawl_git()`, and `capture_commit()`: `ouro/wiki/` and `IGNORED_DIRS`, non-files, `is_sensitive()`, then `is_binary()`. `IGNORED_DIRS` is matched against the **project-relative** path, so a project that lives under e.g. `/tmp/` is not skipped wholesale. `must_exist=False` lets deleted files through (used for `Change: deleted` pointers).
 
-### `crawl(directory)`
+### `crawl(directory, content=False)`
 @param directory Root directory to walk recursively. Defaults to `.` via CLI.
+@param content Stage full file contents instead of pointers (`--content`).
 
-Walks all files under `directory`, keeps those for which `skip_reason()` returns `None`, and enqueues their full content in one write. Reports a count of staged files and separately a count of skipped sensitive files.
+Enumerates files with `list_crawl_files()`, keeps those for which `skip_reason()` returns `None`, and enqueues them in one write. By default each file becomes a **pointer entry** (`Change: crawl`, `Commit:` the short HEAD sha, or `working-tree` when the repo has no commit) so the queue stays small; the agent reads the file at `Source` during synthesis. Reports a count of staged files and separately a count of skipped sensitive files.
+
+### `list_crawl_files(dir_path)`
+
+Inside a git work tree, runs `git ls-files -z --cached --others --exclude-standard -- .` from `dir_path`, so `.gitignore`d paths (generated output, `test-results/`) are not staged while untracked-but-not-ignored files are. Outside git (or if git fails) it falls back to `rglob('*')`. The `skip_reason()` filters still apply afterwards.
+
+### `crawl_ref()` / `crawl_capture(file_path, ref, content)`
+
+`crawl_ref()` is the pointer `Commit` label. `crawl_capture()` builds the entry for a file that passed `skip_reason()`: `file_capture()` when `content` is set, else `pointer_entry(source, ref, 'crawl')`. Shared by `crawl()` and `crawl_git()`. Single-file and raw-text `stage()` calls still embed content.
 
 ### `get_git_changed_files(depth=1)`
 @param depth Number of commits to look back for changed files. Defaults to `1`.
 
 Runs four git commands to collect the full set of recently touched files: unstaged tracked changes (`git diff --name-only`), staged changes (`git diff --name-only --cached`), untracked new files (`git ls-files --others --exclude-standard`), and files changed in the last `depth` commits (`git diff --name-only HEAD~{depth} HEAD`). Returns a set of resolved absolute `Path` objects. Silently skips any command that fails (e.g. git not installed, not a repo).
 
-### `crawl_git(directory, depth=1)`
+### `crawl_git(directory, depth=1, content=False)`
 @param directory Root directory to restrict results to. Defaults to `.` via CLI.
 @param depth Passed through to `get_git_changed_files()`.
 
-Git-aware alternative to `crawl()`. Calls `get_git_changed_files()` to determine which files to stage, then applies the same `skip_reason()` filters as `crawl()`. Only files within `directory` are staged. Recommended for ongoing sessions without hooks — avoids re-queuing unchanged files.
+Git-aware alternative to `crawl()`; stages pointer entries (`Change: crawl`) unless `content` is set (`--content`). Calls `get_git_changed_files()` to determine which files to stage, then applies the same `skip_reason()` filters as `crawl()`. Only files within `directory` are staged. Recommended for ongoing sessions without hooks — avoids re-queuing unchanged files.
 
 ### `get_commit_files(rev='HEAD')`
 @param rev Commit to inspect.
@@ -117,7 +126,12 @@ Combines `SENSITIVE_NAMES`, `SENSITIVE_SUFFIXES`, and heuristic keyword matching
 
 ### `pop()`
 
-Reads and prints the first `### Capture [...]` entry from the queue (content or pointer), removes it, and rewrites the file. If no entries remain, restores the `*(Empty)*` marker. Used by the LLM agent to process one entry at a time during synthesis.
+Reads and prints the first `### Capture [...]` entry from the queue (content or pointer), removes it, and rewrites the file. If no entries remain, restores the `*(Empty)*` marker. Prints one entry at a time; for finishing whole modules use `done()`.
+
+### `done(patterns)`
+@param patterns Exact `Source` paths or `fnmatch` globs (e.g. `src/core/*`; `*` also crosses `/`).
+
+Removes every queue entry whose `Source` equals or glob-matches any pattern, rewrites the queue once (restoring `*(Empty)*` when nothing remains), and prints `Removed N capture(s); M remaining.` CLI: `--done <path-or-glob> [...]`. Lets the agent clear a module in one call instead of editing the queue file by hand.
 
 ### `is_binary(file_path)`
 
@@ -138,8 +152,11 @@ python ouro/scripts/capture.py --crawl --git
 # Include last N commits' worth of changes
 python ouro/scripts/capture.py --crawl --git 3
 
-# Crawl the whole project (use for initial wiki population)
+# Crawl the whole project as pointer entries (initial wiki population; honours .gitignore in a repo)
 python ouro/scripts/capture.py --crawl
+
+# Opt in to full file contents in the queue (large)
+python ouro/scripts/capture.py --crawl --content
 
 # Crawl a specific directory
 python ouro/scripts/capture.py --crawl src/
@@ -155,6 +172,9 @@ python ouro/scripts/capture.py --from-index
 
 # Pre-commit docs check: warn (exit 0) or, with --strict, exit 1 when staged code has no wiki updates
 python ouro/scripts/capture.py --check-docs --strict
+
+# Remove all entries for a module (path or glob) once it is synthesized
+python ouro/scripts/capture.py --done 'src/core/*'
 
 # Pop the first entry from the queue (used during synthesis)
 python ouro/scripts/capture.py --pop
@@ -172,3 +192,5 @@ python ouro/scripts/capture.py --pop
 - `--git` depth uses `HEAD~{depth}` which fails gracefully (silent skip) when the repo has fewer commits than `depth`; the working-tree commands still run.
 
 @note Run as a script, its `main()` goes through `runlog.run()`, which logs argv, exit code and output locally to `~/.ouro/runs/` ([runlog](runlog.md), [ADR-012](../decisions/ADR-012-local-run-log.md)). Set `OURO_RUNLOG=off` to disable.
+
+@note `enqueue()` also deduplicates within a batch, keeping the last capture per source. A crawl that reaches the same file twice, for example through a `CLAUDE.md -> AGENTS.md` symlink, stages it once. This was found on a clone of dabao-dasher.

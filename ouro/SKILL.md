@@ -11,33 +11,48 @@ Ourobor OS helps both vibecoders and professional engineers understand their cod
 
 ## 🚀 Agent Onboarding (do this on the user's behalf)
 
-When a user asks you to set up or onboard Ourobor OS, run these steps from the **project root** in order. Every step is safe to re-run. Only step 5 needs the user's input.
+When a user asks you to set up or onboard Ourobor OS, run these steps from the **project root** in order. Every step is safe to re-run. Only step 6 needs the user's input. If `python` isn't on the PATH, use `python3`. After step 2, use the exact commands bootstrap prints and writes into the protocol.
 
 1. **Locate the skill.** Use the directory containing this `SKILL.md`, referred to below as `<path-to-skill>`. Typical locations are `.claude/skills/ouro`, `.agents/skills/ouro`, `~/.claude/skills/ouro`, `~/.agents/skills/ouro`, or `./ouro`.
 2. **Bootstrap.**
    ```bash
    python <path-to-skill>/scripts/bootstrap.py
    ```
-   This creates `ouro/wiki/` and appends the maintenance protocol to the instruction files it finds (`CLAUDE.md`, `GEMINI.md`, ...), with `<path-to-skill>` already filled in. It is idempotent.
+   - This creates `ouro/wiki/` and appends the maintenance protocol to the instruction files it finds (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, ...), with the skill path and a working Python command filled in.
+   - Symlinked aliases, such as `CLAUDE.md -> AGENTS.md`, get the protocol only once.
+   - If the project already has `docs/` or an ADR folder, bootstrap says so and tells you to keep those as the source of truth, and to put ADRs there.
+   - It is idempotent.
 3. **Measure comment and TODO debt** (git repos only; read-only apart from the saved page):
    ```bash
    python <path-to-skill>/scripts/claim_scan.py --wiki
    ```
-   This saves `ouro/wiki/maps/comment-baseline.md`, which lists `TODO`s by age, stale comments (the code changed after the comment was written) and comments worded as global rules. No LLM is called.
+   This saves `ouro/wiki/maps/comment-baseline.md`, which lists:
+   - `TODO`s by age
+   - stale comments, where the first statement under the comment changed in a later commit
+   - directive-worded comments ("must", "never ..."). This list is for review only, not findings.
+   No LLM is called. Before reporting a stale comment, check it against the code.
 4. **Populate the wiki.**
    ```bash
    python <path-to-skill>/scripts/capture.py --crawl
    ```
-   Then synthesize the queue (see Maintenance Workflow): write entity pages for the most important modules first, add them to `ouro/wiki/index.md`, and pop each capture you finish. On a large repo, do the top 5–10 modules now and tell the user how many captures remain.
-5. **Ask the user about hooks** (optional). Offer:
+   - The crawl respects `.gitignore` and stages lightweight pointer entries. Read the file at each `Source`.
+   - Write entity pages for the most important modules first. One page per directory or package is fine for large repos.
+   - Add the pages to `ouro/wiki/index.md`.
+   - After each module, clear its captures with `capture.py --done '<dir>/*'`. Don't edit the queue by hand.
+   - On a large repo, do the top 5–10 modules now and tell the user how many captures remain.
+5. **Check the docs against the code.** While documenting, compare what the project's existing docs (`docs/`, READMEs, ADRs) say with what the code does.
+   - Record each contradiction in `ouro/wiki/maps/doc-drift.md` as **confirmed**, with the doc location, the claim, and the contradicting code as `file:line`.
+   - Record a claim you checked and found accurate as **dismissed**.
+   - Don't edit the docs yet; list the proposed fixes for the user.
+6. **Ask the user about hooks** (optional). Offer:
    ```bash
    python <path-to-skill>/scripts/hooks.py install --docs-check warn --stop-hook
    ```
    This captures on every commit, warns when code ships without docs, and (in Claude Code) has the agent write docs before it finishes a turn. Install only if the user agrees.
-6. **Report back** to the user in a few lines:
+7. **Report back** to the user in a few lines:
    - what was created
-   - the baseline numbers: TODO count and oldest age, stale comments, global-wording comments
-   - the 3 most notable stale comments or TODOs, as `file:line`
+   - the baseline numbers: TODO count and oldest age, and stale comments (say how many you confirmed)
+   - confirmed doc drift, as `doc → code file:line`
    - which modules are documented so far and how many captures are pending
    - whether hooks were installed
 
@@ -114,7 +129,7 @@ python <path-to-skill>/scripts/capture.py --from-index
 python <path-to-skill>/scripts/capture.py --check-docs --strict
 ```
 
-Staging a file that is already in the queue replaces its older entry. Pointer entries carry no content — read the current file at `Source` when synthesizing (`Change: deleted` means retire or update its entity).
+Staging a file that is already in the queue replaces its older entry. Crawls (`Change: crawl`) and hooks stage pointer entries with no content. Clear finished work with `--done <path-or-glob>`. Pointer entries carry no content — read the current file at `Source` when synthesizing (`Change: deleted` means retire or update its entity).
 
 ### 2. Monitor & Synthesize
 
@@ -179,7 +194,7 @@ ouro/
 ## 💡 Best Practices
 
 ### Universal Principles
-- **1:1 Parity**: Aim for a 1:1 mapping between complex code modules and wiki entities
+- **Granularity**: One entity per meaningful module; a directory or package page is fine for large repos, split it when it grows
 - **Compounding**: Every major feature or refactor should be captured and synthesized
 - **ADRs**: Use the `decisions/` folder to document *why* something was done, not just *what*
 - **Portability**: Keep all wiki links relative so the `ouro/` folder remains portable
