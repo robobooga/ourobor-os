@@ -91,6 +91,7 @@ Ask your agent: **"Set up Ourobor OS in this project."** It follows the Agent On
 ```
 python ./ouro/scripts/bootstrap.py                  # create ouro/wiki/ + protocol
 python ./ouro/scripts/claim_scan.py --wiki          # stale comments, TODO age → ouro/wiki/maps/comment-baseline.md
+python ./ouro/scripts/doc_scan.py --wiki            # docs the code has outgrown → ouro/wiki/maps/doc-drift.md
 python ./ouro/scripts/capture.py --crawl            # stage code for your agent to document
 ```
 Replace `./ouro` with wherever the skill was installed (for example `.claude/skills/ouro` or `.agents/skills/ouro`).

@@ -53,6 +53,7 @@ Before doing any work, check whether the wiki has already been populated:
 - Existing docs stay the source of truth. Wiki pages link to them instead of duplicating them.
 - Put new ADRs in the project's existing ADR directory (for example `docs/adr/`) rather than `ouro/wiki/decisions/`.
 - When code contradicts a statement in those docs, record it in `ouro/wiki/maps/doc-drift.md` and fix the doc.
+- To find such statements, run `python <path-to-skill>/scripts/doc_scan.py --wiki`. Then check each unconfirmed entry on that page against the code and set its `Status` to `confirmed` (with evidence) or `dismissed` (with a reason).
 
 ### 4. Code Comments & TODOs
 - **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.

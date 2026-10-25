@@ -38,7 +38,7 @@ The protocol's **Session Start** step distinguishes hook-enabled projects (check
 
 **Interpreter**: `python_command()` returns `python3` if on PATH, else `python`, else the absolute `sys.executable`. Versioned names such as `python3.14` are avoided because the command is baked into committed instruction files and would break on upgrade. It replaces the `<python>` placeholder in the protocol and prefixes the printed next steps.
 
-**Existing docs**: `find_project_docs()` looks for `docs/` or `doc/` and an ADR dir (`docs/adr`, `docs/adrs`, `docs/decisions`, `adr/`, and similar). When found, bootstrap prints the detection and appends an "Existing project docs" subsection to the protocol: existing docs stay the source of truth, wiki pages link to them, ADRs go in the detected dir, and code/doc contradictions are recorded in `ouro/wiki/maps/doc-drift.md` and fixed.
+**Existing docs**: `find_project_docs()` looks for `docs/` or `doc/` and an ADR dir (`docs/adr`, `docs/adrs`, `docs/decisions`, `adr/`, and similar). When found, bootstrap prints the detection and appends an "Existing project docs" subsection to the protocol: existing docs stay the source of truth, wiki pages link to them, ADRs go in the detected dir, and code/doc contradictions are recorded in `ouro/wiki/maps/doc-drift.md` and fixed. It also gives the `doc_scan.py --wiki` command that shortlists them, and says to mark each entry confirmed or dismissed ([doc_scan](doc_scan.md)).
 
 **Instruction files checked**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `CURSOR.md`, `CLINE.md`, `AIDER.md`, `CONTINUE.md`, `AI_INSTRUCTIONS.md`. Files are deduplicated by resolved path, so a `CLAUDE.md -> AGENTS.md` symlink gets the protocol once.
 
@@ -57,7 +57,7 @@ python <path-to-skill>/scripts/bootstrap.py --install-hooks
 python <path-to-skill>/scripts/bootstrap.py --install-hooks --docs-check strict --commit-gate
 ```
 
-@note After bootstrapping, the next steps printed are: run `claim_scan.py --wiki` (comment/TODO baseline), run `capture.py --crawl`, have the LLM synthesize, and optionally install hooks. These are the same steps as the Agent Onboarding checklist in `SKILL.md`.
+@note After bootstrapping, the next steps printed are: run `claim_scan.py --wiki` (comment/TODO baseline) and `doc_scan.py --wiki` (doc drift shortlist), run `capture.py --crawl`, have the LLM synthesize, and optionally install hooks. These are the same steps as the Agent Onboarding checklist in `SKILL.md`.
 
 @note The maintenance protocol text is defined as an inline string inside `bootstrap()`. If the protocol changes, it must be updated in both `bootstrap.py` and `ouro/AGENT_PROTOCOL.md` to stay in sync.
 

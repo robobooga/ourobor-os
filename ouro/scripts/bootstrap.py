@@ -63,6 +63,7 @@ This project already has docs (`{docs_dir or adr_dir}/`).
 - Existing docs stay the source of truth. Wiki pages link to them instead of duplicating them.
 - Put new ADRs in {adr_target}, not in `ouro/wiki/decisions/`.
 - When code contradicts a statement in those docs, record it in `ouro/wiki/maps/doc-drift.md` and fix the doc.
+- To find such statements, run `<python> <path-to-skill>/scripts/doc_scan.py --wiki`. Then check each unconfirmed entry on that page against the code and set its `Status` to `confirmed` (with evidence) or `dismissed` (with a reason).
 """
 
 def bootstrap(hook_options=None):
@@ -230,6 +231,8 @@ Before doing any work, check whether the wiki has already been populated:
     print("\n[*] Next steps:")
     print("1. Measure comment/TODO debt and save it as a wiki page:")
     print(f"   {py} {skill_ref}/scripts/claim_scan.py --wiki")
+    print("   Shortlist doc statements the code may have outgrown (ouro/wiki/maps/doc-drift.md):")
+    print(f"   {py} {skill_ref}/scripts/doc_scan.py --wiki")
     print("2. Capture your codebase:")
     print(f"   {py} {skill_ref}/scripts/capture.py --crawl")
     print("3. Have your LLM synthesize ouro/wiki/capture-queue.md into ouro/wiki/ pages, then update ouro/wiki/index.md")

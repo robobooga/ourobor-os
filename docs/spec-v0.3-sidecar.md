@@ -102,7 +102,7 @@ Prose docs (`docs/**/*.md`, `README*`, ADRs, instruction files) make claims abou
 - **`doc_scan.py` (deterministic, no LLM):**
   - Extracts code references from Markdown: backticked paths (`src/audio/`), symbols (`AudioWiring`), commands, and links to source files.
   - **Broken references**: a path that doesn't exist, or a symbol not found in tracked files (via `git grep -w`).
-  - **Outdated sections**: each doc section (by heading) is dated with `git blame`, and each referenced file with `git log`. A section is a drift candidate when code it references changed in commits after the section was last edited. Candidates are ranked by how many commits and files have moved since.
+  - **Outdated sections**: each paragraph, list item or table row is dated with `git blame`, and each referenced file with `git log`. A section is a drift candidate when a file one of its paragraphs references changed in commits after that paragraph was last edited. Referenced directories are checked for existence only. Candidates are ranked by the most-changed file, with provisional wording ("stopgap", "nothing imports") as a boost. These heuristics, tuned on dabao-dasher, are in [ADR-013](../wiki/decisions/ADR-013-doc-scan-heuristics.md).
   - Output: a text or JSON report, and `--wiki` writes `ouro/wiki/maps/doc-drift.md`, adopting the format the dabao-dasher agent invented. Confirmed entries are kept across re-runs, and new candidates are marked *unconfirmed*.
 - **Agent confirmation (the protocol, not an LLM call from a script):**
   - Onboarding and session-start steps ask the agent to check the top candidates against the code.
