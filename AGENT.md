@@ -20,7 +20,7 @@ The project's living documentation lives in `wiki/` (root level). This directory
 ## Wiki Protocol
 - **Persistence**: If it's not in the wiki, it doesn't exist.
 - **Compounding**: Every session grows the collective intelligence.
-- **1:1 Parity**: Maintain direct mapping between source modules and documentation.
+- **Granularity**: One entity per meaningful module (here, one per `ouro/scripts/` module).
 
 > **RULE**: Any code change made during a session **must** be accompanied by wiki updates in the same response — not as a follow-up. Specifically:
 > - Update the relevant `wiki/entities/*.md` file to reflect changed behaviour, new functions, or removed features.
@@ -52,14 +52,14 @@ Compare the agent's `REPORT` (and the wiki snapshot) with what you would have do
 
 ## Workflow For This Project
 1. **Monitor**: Check `wiki/capture-queue.md`.
-2. **Synthesize**: Use `python ouro/scripts/capture.py --pop` to process captures.
+2. **Synthesize**: Read each capture, document it, then clear it with `python ouro/scripts/capture.py --done <path-or-glob>` (or `--pop` for one entry).
 3. **Document**: Transform entries into `wiki/entities/`, `wiki/patterns/`, or `wiki/decisions/`.
 4. **Index**: Update `wiki/index.md`.
 5. **Clean**: Remove synthesized entries from queue.
 
 ## Workflow For Skill Package
 1. **Monitor**: Check `ouro/wiki/capture-queue.md` (in the target project after install).
-2. **Synthesize**: Use `python ouro/scripts/capture.py --pop` to process captures.
+2. **Synthesize**: Read each capture, document it, then clear it with `python ouro/scripts/capture.py --done <path-or-glob>` (or `--pop` for one entry).
 3. **Document**: Transform entries into `ouro/wiki/entities/` or `patterns/`.
 4. **Index**: Update `ouro/wiki/index.md`.
 5. **Clean**: Remove synthesized entries from queue.

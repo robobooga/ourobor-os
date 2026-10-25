@@ -2,6 +2,7 @@ import sys
 import os
 import hashlib
 import subprocess
+from fnmatch import fnmatchcase
 from datetime import datetime
 from pathlib import Path
 
@@ -102,7 +103,10 @@ def enqueue(captures):
         preamble, entries = split_entries(content)
         new_sources = {source for source, _ in captures if source != MANUAL_SOURCE}
         entries = [entry for entry in entries if entry_source(entry) not in new_sources]
-        entries += [text.splitlines() for _, text in captures]
+        # Last capture per source wins; symlinked aliases (CLAUDE.md -> AGENTS.md) resolve to one source
+        latest = {source: i for i, (source, _) in enumerate(captures) if source != MANUAL_SOURCE}
+        entries += [text.splitlines() for i, (source, text) in enumerate(captures)
+                    if source == MANUAL_SOURCE or latest[source] == i]
         QUEUE_PATH.write_text(render_queue(preamble, entries), encoding='utf-8')
         return True
     except Exception as e:
@@ -224,10 +228,10 @@ def skip_reason(file_path, must_exist=True):
         return 'binary'
     return None
 
-def run_git(args):
-    """Runs a git command from the project root; returns stdout, or None on failure."""
+def run_git(args, cwd=None):
+    """Runs a git command from the project root (or `cwd`); returns stdout, or None on failure."""
     try:
-        result = subprocess.run(['git'] + args, capture_output=True, text=True, cwd=PROJECT_ROOT)
+        result = subprocess.run(['git'] + args, capture_output=True, text=True, cwd=cwd or PROJECT_ROOT)
     except Exception:
         return None
     return result.stdout if result.returncode == 0 else None
@@ -250,8 +254,8 @@ def get_git_changed_files(depth=1):
     return {(cwd / f).resolve() for f in files}
 
 
-def crawl_git(directory, depth=1):
-    """Crawls only git-changed files within directory."""
+def crawl_git(directory, depth=1, content=False):
+    """Crawls only git-changed files within directory (pointer entries unless `content`)."""
     dir_path = Path(directory).resolve()
     changed = get_git_changed_files(depth=depth)
 
@@ -262,6 +266,7 @@ def crawl_git(directory, depth=1):
     print(f'Git-aware crawl ({len(changed)} changed file(s) detected)...')
     captures = []
     skipped_sensitive = 0
+    ref = crawl_ref()
 
     for file_path in sorted(changed):
         try:
@@ -275,7 +280,7 @@ def crawl_git(directory, depth=1):
         if reason:
             continue
 
-        capture = file_capture(file_path)
+        capture = crawl_capture(file_path, ref, content)
         if capture:
             captures.append(capture)
 
@@ -283,8 +288,31 @@ def crawl_git(directory, depth=1):
         print(f'Git-aware crawl complete. Staged {len(captures)} files. Skipped {skipped_sensitive} sensitive file(s).')
 
 
-def crawl(directory):
-    """Crawls a directory for files containing Doxygen tags."""
+def crawl_ref():
+    """Commit label for crawl pointers: the short HEAD sha, or `working-tree` when there is no commit yet."""
+    return (run_git(['rev-parse', '--short', 'HEAD']) or '').strip() or 'working-tree'
+
+
+def crawl_capture(file_path, ref, content):
+    """Crawl capture for a file that passed skip_reason(): full content with `content`, else a pointer."""
+    if content:
+        return file_capture(file_path)
+    source = source_for(file_path)
+    return source, pointer_entry(source, ref, 'crawl')
+
+
+def list_crawl_files(dir_path):
+    """Files under dir_path: tracked plus untracked-but-not-gitignored inside a git work tree, else rglob."""
+    inside = run_git(['rev-parse', '--is-inside-work-tree'], cwd=dir_path)
+    if inside is not None and inside.strip() == 'true':
+        output = run_git(['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', '.'], cwd=dir_path)
+        if output is not None:
+            return sorted({dir_path / name for name in output.split('\0') if name})
+    return sorted(dir_path.rglob('*'))
+
+
+def crawl(directory, content=False):
+    """Crawls a directory, honouring .gitignore inside a git work tree; stages pointer entries unless `content`."""
     dir_path = Path(directory).resolve()
     if not dir_path.exists() or not dir_path.is_dir():
         print(f'Error: Directory "{directory}" does not exist.')
@@ -293,8 +321,9 @@ def crawl(directory):
     print(f'Crawling directory: {dir_path}...')
     captures = []
     skipped_sensitive = 0
+    ref = crawl_ref()
 
-    for file_path in sorted(dir_path.rglob('*')):
+    for file_path in list_crawl_files(dir_path):
         reason = skip_reason(file_path)
         if reason == 'sensitive':
             print(f'Skipping sensitive file: {file_path}')
@@ -302,7 +331,7 @@ def crawl(directory):
         if reason:
             continue
 
-        capture = file_capture(file_path)
+        capture = crawl_capture(file_path, ref, content)
         if capture:
             captures.append(capture)
 
@@ -438,7 +467,7 @@ def status():
     pending = count_pending()
     if pending:
         print(f'Ourobor OS: {pending} pending capture(s) in ouro/wiki/capture-queue.md. '
-              'Synthesize them into the wiki per the maintenance protocol, then `--pop` each one.')
+              'Synthesize them into the wiki per the maintenance protocol, then clear them with `--done <path-or-glob>` (or `--pop`).')
 
 
 def pop():
@@ -464,16 +493,34 @@ def pop():
     except Exception as e:
         print(f"Failed to update queue: {e}")
 
+def done(patterns):
+    """Removes every queue entry whose Source equals a pattern or matches it as a glob (e.g. `src/core/*`)."""
+    if not QUEUE_PATH.exists():
+        print('Queue file not found.')
+        return
+    try:
+        preamble, entries = split_entries(QUEUE_PATH.read_text(encoding='utf-8'))
+        kept = [entry for entry in entries
+                if not any(fnmatchcase(entry_source(entry) or '', pattern) for pattern in patterns)]
+        if len(kept) != len(entries):
+            QUEUE_PATH.write_text(render_queue(preamble, kept), encoding='utf-8')
+    except Exception as e:
+        print(f'Failed to update queue: {e}')
+        return
+    print(f'Removed {len(entries) - len(kept)} capture(s); {len(kept)} remaining.')
+
 def main():
     if len(sys.argv) < 2:
-        print('Error: Please provide a file path, raw snippet, --crawl [--git [N]] [dir], --from-commit [rev], '
-              '--from-index, --check-docs [--strict], --status, or --pop.')
+        print('Error: Please provide a file path, raw snippet, --crawl [--git [N]] [--content] [dir], --from-commit [rev], '
+              '--from-index, --check-docs [--strict], --status, --pop, or --done <path-or-glob> [...].')
         sys.exit(1)
 
     arg1 = sys.argv[1]
 
     if arg1 == '--crawl':
         rest = sys.argv[2:]
+        content = '--content' in rest
+        rest = [a for a in rest if a != '--content']
         use_git = '--git' in rest
         git_depth = 1
         if use_git:
@@ -482,9 +529,9 @@ def main():
                 git_depth = int(rest.pop(0))
         directory = rest[0] if rest else '.'
         if use_git:
-            crawl_git(directory, depth=git_depth)
+            crawl_git(directory, depth=git_depth, content=content)
         else:
-            crawl(directory)
+            crawl(directory, content=content)
     elif arg1 == '--from-commit':
         capture_commit(sys.argv[2] if len(sys.argv) > 2 else 'HEAD')
     elif arg1 == '--from-index':
@@ -495,6 +542,11 @@ def main():
         status()
     elif arg1 == '--pop':
         pop()
+    elif arg1 == '--done':
+        if len(sys.argv) < 3:
+            print('Error: --done needs at least one path or glob, e.g. --done \'src/core/*\'.')
+            sys.exit(1)
+        done(sys.argv[2:])
     else:
         stage(arg1)
 

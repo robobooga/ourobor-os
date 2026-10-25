@@ -120,8 +120,9 @@ def wiki_snapshot(root):
     if wiki.is_dir():
         for path in sorted(wiki.rglob('*.md')):
             text = path.read_text(encoding='utf-8', errors='replace')
+            head = [ln for ln in text.splitlines() if ln.strip()][:5]  # pages often open with a '# Title' line
             pages.append({'path': path.relative_to(root).as_posix(), 'bytes': len(text.encode('utf-8')),
-                          'entity': text.lstrip().startswith('@entity')})
+                          'entity': any(ln.lstrip().startswith('@entity') for ln in head)})
     queue = wiki / 'capture-queue.md'
     pending = None
     if queue.exists():

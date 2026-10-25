@@ -4,6 +4,8 @@ You are responsible for maintaining the project's **LLM Wiki** in `ouro/wiki/`.
 
 ### 0. Session Start
 
+Commands below use `python`; if it is not on your PATH, use `python3` (bootstrap writes the working command into the protocol it appends).
+
 Before doing any work, check whether the wiki has already been populated:
 
 - **Initial setup** (no entity files in `ouro/wiki/entities/`): run a full crawl to bootstrap the wiki.
@@ -26,15 +28,15 @@ Before doing any work, check whether the wiki has already been populated:
 ### 1. Monitor & Synthesize
 - **Monitor**: Regularly check `ouro/wiki/capture-queue.md` for new snippets.
 - **Synthesize**: Move snippets into appropriate `ouro/wiki/entities/`, `ouro/wiki/patterns/`, or `ouro/wiki/maps/` files using **Doxygen** tags (`@entity`, `@brief`, `@snippet`).
-- **Pointer captures**: Entries with `Commit` and `Change` fields instead of content come from the git hooks (`Commit: staged` when captured at pre-commit). Read the current file at `Source` before synthesizing; `Change: deleted` means the file is gone — update or remove its entity.
+- **Pointer captures**: Entries with `Commit` and `Change` fields instead of content come from crawls (`Change: crawl`) and the git hooks (`Commit: staged` when captured at pre-commit). Read the current file at `Source` before synthesizing; `Change: deleted` means the file is gone — update or remove its entity.
 - **Ship docs with the change**: When you commit code, update and `git add` the relevant wiki pages in the same commit. If the Ourobor OS docs check or commit gate blocks a commit, document the listed files, stage the wiki pages, and retry. Prefix the commit with `OURO_SKIP_DOCS_CHECK=1` only when the change needs no documentation. If an Ourobor OS Stop hook reports undocumented changes when you finish a task, document them before stopping, or reply briefly why they need no documentation yet.
-- **Finalize**: After synthesis, remove processed entries from the queue:
+- **Finalize**: After synthesizing a file or module, clear its entries (exact paths or globs; `--pop` removes one entry at a time). Don't edit `capture-queue.md` by hand:
   ```bash
-  python <path-to-skill>/scripts/capture.py --pop
+  python <path-to-skill>/scripts/capture.py --done 'src/core/*'
   ```
 
 ### 2. Doxygen Standards
-- Every entity/pattern file must start with `@entity` and `@brief`.
+- Every entity/pattern file must have `@entity` and `@brief` in its first few lines. One optional `# Title` heading may come before `@entity`.
 - Use `@snippet` to mirror critical code logic.
 - Use `@note` or `@warning` for architectural context.
 
@@ -47,6 +49,11 @@ Before doing any work, check whether the wiki has already been populated:
   - **Rationale**: The reasoning behind the final choice.
 - Always link new ADRs in the `ouro/wiki/index.md` file.
 
+### 3b. Existing project docs (when the project has a `docs/` or `doc/` directory)
+- Existing docs stay the source of truth. Wiki pages link to them instead of duplicating them.
+- Put new ADRs in the project's existing ADR directory (for example `docs/adr/`) rather than `ouro/wiki/decisions/`.
+- When code contradicts a statement in those docs, record it in `ouro/wiki/maps/doc-drift.md` and fix the doc.
+
 ### 4. Code Comments & TODOs
 - **Scope**: A comment applies only to the line, block, or function it sits in. Do not generalize a comment about one corner case into a rule for the whole codebase; check the code and the wiki first.
 - **Staleness**: Comments drift. When a comment and the code disagree, trust the code, and fix or delete the comment in the same change.
@@ -55,6 +62,6 @@ Before doing any work, check whether the wiki has already been populated:
 ### 5. Maintenance Best Practices
 - **Fragment**: Split files that become too large or cover too many distinct concepts.
 - **Combine**: Merge highly interdependent or undersized files.
-- **Parity**: Maintain 1:1 mapping between code modules and documentation.
+- **Granularity**: Keep one entity per meaningful module. A directory or package page is fine for large repos; split it when a page grows.
 - **Verification**: Ensure `ouro/wiki/index.md` is always up to date with new entries.
 - **Consistency**: Maintain structural adherence to `ouro/wiki/schema.md`.

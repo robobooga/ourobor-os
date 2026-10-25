@@ -11,7 +11,7 @@ This document defines the operating manual for this wiki. It mirrors the schema 
 ## 2. Doxygen Tags
 | Tag | Description |
 | --- | --- |
-| `@entity <name>` | Defines the module or entity this file documents. Required at the top of every entity/pattern file. |
+| `@entity <name>` | Defines the module or entity this file documents. Required in every entity/pattern file. An optional single `#` title heading may precede it; it must appear within the first few lines. |
 | `@brief <text>` | A one-sentence summary of the entity. Required. |
 | `@snippet <id>` | Identifies a code block that is critical for understanding. |
 | `@note <text>` | Important information for developers. |
@@ -23,13 +23,13 @@ This document defines the operating manual for this wiki. It mirrors the schema 
 - **Capture**: New code snippets are staged in `wiki/capture-queue.md`.
 - **Synthesis**: The LLM must periodically process the queue and update `wiki/entities/`, `wiki/patterns/`, or `wiki/maps/` as appropriate.
 - **ADR**: Major architectural decisions must be recorded in `wiki/decisions/` capturing context, alternatives, trade-offs, and rationale.
-- **Parity**: Maintain a 1:1 mapping between `ouro/scripts/` modules and `wiki/entities/` files.
+- **Parity**: Keep one entity per meaningful module (here, one per `ouro/scripts/` module). A directory or package page is fine for large repos; split it when a page grows.
 
 ## 4. Directory Structure
 - `index.md`: The central hub and catalog. Always kept up to date.
 - `schema.md`: This file. The operating manual.
 - `capture-queue.md`: Staging area for new knowledge.
-- `entities/`: Documentation for code modules (1:1 with source files).
+- `entities/`: Documentation for code modules (one per meaningful module).
 - `decisions/`: Architecture Decision Records (ADRs).
 - `patterns/`: Abstracted, reusable workflow patterns.
 - `maps/`: High-level data flows and mental models.
