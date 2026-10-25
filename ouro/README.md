@@ -110,6 +110,17 @@ python <path-to-skill>/scripts/claim_scan.py ../other-repo --limit 30
 
 The skill's own files are skipped unless `--include-skill` is passed.
 
+### Find Docs the Code Has Outgrown
+
+**What to expect:**
+A read-only scan (stdlib, no LLM) of the tracked Markdown docs. It extracts the paths, symbols and file links each section cites, then ranks the sections where a reference is broken, or where the cited code changed in commits after the paragraph citing it was last edited. Provisional wording ("stopgap", "for now", "nothing imports") ranks a section higher. `--wiki` merges the top candidates into `ouro/wiki/maps/doc-drift.md`. Your agent confirms or dismisses each one against the code, and re-running keeps those reviews.
+
+```bash
+python <path-to-skill>/scripts/doc_scan.py --wiki     # report + merge into the drift page
+python <path-to-skill>/scripts/doc_scan.py --json     # machine-readable
+python <path-to-skill>/scripts/doc_scan.py ../other-repo --limit 20
+```
+
 ### Review What Happened (Local Run Log)
 
 **What to expect:**
@@ -240,6 +251,8 @@ ouro/
 │   ├── bootstrap.py                 # Smart initialization with environment detection
 │   ├── capture.py                   # Portable capture script
 │   ├── claim_scan.py                # Comment/TODO debt scan (stale comments, TODO age)
+│   ├── doc_scan.py                  # Docs-vs-code drift shortlist (broken refs, code moved since)
+│   ├── drift_page.py                # Merges scan candidates into wiki/maps/doc-drift.md
 │   ├── runlog.py                    # Local run log (~/.ouro/runs/), agent reports
 │   └── hooks.py                     # Optional git pre/post-commit and Claude Code hooks
 └── wiki/                            # Template wiki structure
@@ -313,6 +326,13 @@ Read-only comment and TODO debt scan that:
 - Uses `tokenize`/`ast` for Python (scope names such as `Class.method`) and a line-comment regex for other languages
 - Dates each comment and the code it annotates with `git blame`
 - Reports TODO age, stale comments and global-sounding wording; `--wiki` saves `ouro/wiki/maps/comment-baseline.md`
+
+### scripts/doc_scan.py
+Read-only docs-vs-code drift scan that:
+- Extracts backticked paths and symbols, and relative file links, from each section of the tracked Markdown docs
+- Flags broken references (no such tracked file, or a symbol `git grep -w` can't find in code)
+- Dates each paragraph with `git blame` and each cited file with `git log`, and ranks sections whose code moved on
+- `--wiki` merges the shortlist into `ouro/wiki/maps/doc-drift.md` through `drift_page.py`, keeping reviewed entries
 
 ### scripts/runlog.py
 Local, opt-out run log that:

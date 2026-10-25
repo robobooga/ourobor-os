@@ -70,6 +70,8 @@ After the move into the skill and the onboarding work, `--include-skill` scanned
 
 Current baseline with the statement-span rules (`--include-skill`, 2026-09-30): 8 files, 70 comments, 0 TODOs, 0 stale, 0 directive-worded. (The count of 70 includes this change's own comments.)
 
+After adding `doc_scan.py` and `drift_page.py` (2026-10-25): 10 files, 89 comments, 0 TODOs, 0 stale, 0 directive-worded.
+
 ## Verified end-to-end
 
 In a throwaway repo with a backdated commit, a stale comment and a TODO, the skill installed at `.claude/skills/ouro` produced these results:

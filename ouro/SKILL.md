@@ -1,6 +1,6 @@
 ---
 name: ouro
-description: Ourobor OS — observability and documentation for your codebase. Onboard a project (bootstrap a living LLM wiki, measure stale comments and old TODOs), explain what code does, and keep docs in sync with code via Doxygen-tagged Markdown. Use when the user asks to set up / onboard Ourobor OS, document or explain a codebase, find stale comments or TODO debt, or maintain the ouro/wiki. Works with Claude Code, Gemini CLI, Cursor, and other LLM tools.
+description: Ourobor OS — observability and documentation for your codebase. Onboard a project (bootstrap a living LLM wiki, measure stale comments and old TODOs), explain what code does, and keep docs in sync with code via Doxygen-tagged Markdown. Use when the user asks to set up / onboard Ourobor OS, document or explain a codebase, find stale comments, TODO debt or outdated docs, or maintain the ouro/wiki. Works with Claude Code, Gemini CLI, Cursor, and other LLM tools.
 ---
 
 # Ourobor OS: Observability & Documentation for Your Codebase
@@ -40,9 +40,13 @@ When a user asks you to set up or onboard Ourobor OS, run these steps from the *
    - Add the pages to `ouro/wiki/index.md`.
    - After each module, clear its captures with `capture.py --done '<dir>/*'`. Don't edit the queue by hand.
    - On a large repo, do the top 5–10 modules now and tell the user how many captures remain.
-5. **Check the docs against the code.** While documenting, compare what the project's existing docs (`docs/`, READMEs, ADRs) say with what the code does.
-   - Record each contradiction in `ouro/wiki/maps/doc-drift.md` as **confirmed**, with the doc location, the claim, and the contradicting code as `file:line`.
-   - Record a claim you checked and found accurate as **dismissed**.
+5. **Check the docs against the code.** Shortlist the doc statements most likely to be out of date (git repos only; no LLM is called):
+   ```bash
+   python <path-to-skill>/scripts/doc_scan.py --wiki
+   ```
+   - This writes the top 10 candidates to `ouro/wiki/maps/doc-drift.md`. A candidate is a doc section (`docs/`, READMEs, ADRs, instruction files) that has broken references, or that cites code changed in commits after the section was last edited. Provisional wording ("stopgap", "nothing imports ...") ranks it higher.
+   - For each unconfirmed entry, read the claim and the code it cites. Set `Status` to `confirmed` and add `- Evidence:` with the contradicting code as `file:line`, or set it to `dismissed` and add `- Reason:`. Re-running keeps your entries, and a dismissed one comes back only if its code changes.
+   - Also record contradictions you notice while documenting in step 4, as entries with a `- Status:` line.
    - Don't edit the docs yet; list the proposed fixes for the user.
 6. **Ask the user about hooks** (optional). Offer:
    ```bash
@@ -52,7 +56,7 @@ When a user asks you to set up or onboard Ourobor OS, run these steps from the *
 7. **Report back** to the user in a few lines:
    - what was created
    - the baseline numbers: TODO count and oldest age, and stale comments (say how many you confirmed)
-   - confirmed doc drift, as `doc → code file:line`
+   - confirmed doc drift, as `doc → code file:line`, and how many `doc_scan` candidates you confirmed out of those you reviewed
    - which modules are documented so far and how many captures are pending
    - whether hooks were installed
 
@@ -186,7 +190,8 @@ ouro/
     ├── decisions/            # Architecture Decision Records (ADRs)
     ├── patterns/             # Reusable architectural patterns
     └── maps/                 # High-level mental models and data flows
-        └── comment-baseline.md  # claim_scan.py --wiki output (regenerate, do not hand-edit)
+        ├── comment-baseline.md  # claim_scan.py --wiki output (regenerate, do not hand-edit)
+        └── doc-drift.md         # doc_scan.py --wiki shortlist; review entries by editing their Status
 
 ~/.ouro/runs/<project>-<hash>/events.jsonl   # local run log (runlog.py), outside the repo
 ```
@@ -278,6 +283,7 @@ Here's a typical session with Ourobor OS:
 - Read `ouro/wiki/schema.md` for detailed Doxygen protocol
 - Read `ouro/wiki/index.md` to see what's already documented
 - Read `ouro/wiki/maps/comment-baseline.md` for stale comments and TODO debt (re-run `claim_scan.py --wiki` to refresh)
+- Read `ouro/wiki/maps/doc-drift.md` for doc statements that no longer match the code (re-run `doc_scan.py --wiki` to raise new candidates)
 - Check `ouro/wiki/capture-queue.md` regularly for new captures
 
 ---
